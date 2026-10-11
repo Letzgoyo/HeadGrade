@@ -107,13 +107,23 @@ def _same_value(row: Fact, num: float | None, text: str | None) -> bool:
     return False
 
 
-def compare_second(row: Fact, project_name: str, second: list[Second]) -> str:
+def fmt(v) -> str:
+    if isinstance(v, (int, float)):
+        a = abs(v)
+        return f"{v / 1e9:,.3f}B" if a >= 1e9 else f"{v / 1e6:,.3f}M" if a >= 1e6 else f"{v:,.6g}"
+    return str(v)
+
+
+def compare_second(row: Fact, project_name: str, second: list[Second]) -> tuple[str, list]:
+    """('agree' | 'conflict' | 'none', the other reading's values)."""
     scoped = REGISTRY[row.key].scope == "project"
     cands = [x for x in second if x.key == row.key and (x.metal or None) == (row.metal or None)
              and (x.category or None) == (row.category or None) and (not scoped or _proj_match(project_name, x.project))]
     if not cands:
-        return "none"
-    return "agree" if any(_same_value(row, x.num, x.text) for x in cands) else "conflict"
+        return "none", []
+    if any(_same_value(row, x.num, x.text) for x in cands):
+        return "agree", []
+    return "conflict", [x.num if x.num is not None else x.text for x in cands]
 
 
 def compare_cross_doc(row: Fact, others: list[Fact]) -> str:
@@ -154,7 +164,7 @@ def arithmetic_conflicts(rows: list[Fact]) -> dict[int, list[str]]:
     return out
 
 
-def decide(row: Fact, second: str, cross: str, arith: list[str]) -> tuple[str, list[dict]]:
+def decide(row: Fact, second: str, cross: str, arith: list[str], second_values: list | None = None) -> tuple[str, list[dict]]:
     checks: list[dict] = []
     add = lambda name, passed, detail="": checks.append({"name": name, "passed": passed, "detail": detail})
     add("quote_on_page", row.auto_check == "quote_found", row.auto_check or "")
@@ -162,7 +172,9 @@ def decide(row: Fact, second: str, cross: str, arith: list[str]) -> tuple[str, l
     if ok is not None:
         add("plausible_range", ok, why)
     if second != "none":
-        add("second_reading", second == "agree", "an independent reading " + ("matched" if second == "agree" else "gave a different value"))
+        mine = row.value_num if row.value_num is not None else row.value_text
+        add("second_reading", second == "agree", "an independent reading matched" if second == "agree" else
+            f"the second reading found {', '.join(fmt(v) for v in (second_values or []))} but the first found {fmt(mine)}")
     if cross != "none":
         add("cross_document", cross == "agree", "another document " + ("states the same figure" if cross == "agree" else "states a different figure for the same date"))
     if arith:
@@ -227,9 +239,9 @@ def apply(session: Session, company: Company, doc_id: int, second: list[Extracte
     arith = arithmetic_conflicts(rows)
     stats = AutoStats()
     for r in rows:
-        s_res = compare_second(r, names.get(r.project_id, ""), sec) if second is not None else "none"
+        s_res, s_vals = compare_second(r, names.get(r.project_id, ""), sec) if second is not None else ("none", [])
         c_res = compare_cross_doc(r, others)
-        decision, checks = decide(r, s_res, c_res, arith.get(r.id, []))
+        decision, checks = decide(r, s_res, c_res, arith.get(r.id, []), s_vals)
         _commit(r, decision, checks, now, stats)
     session.flush()
     return stats

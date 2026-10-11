@@ -25,6 +25,17 @@ page = st.sidebar.radio("View", PAGES)
 st.sidebar.caption("Private admin screen. Draft cards use unverified facts; published cards use only what you verify.")
 
 
+def show(f) -> str:
+    """A readable value: $410.0M, 1,332,417,631, 4.5, PFS."""
+    if f.value_text is not None:
+        return f.value_text
+    if f.value_num is None:
+        return "-"
+    v, a = f.value_num, abs(f.value_num)
+    body = f"{v / 1e9:,.3f}B" if a >= 1e9 else f"{v / 1e6:,.1f}M" if a >= 1e6 else f"{v:,.6g}"
+    return (f"{f.currency} " if f.currency else "") + body
+
+
 def companies(s):
     return list(s.scalars(select(Company).order_by(Company.name)))
 
@@ -58,9 +69,8 @@ def page_review():
         if audits:
             st.subheader(f"Spot-checks ({len(audits)}): is the machine's value right?")
             for f in audits[:10]:
-                val = f.value_text if f.value_text is not None else f"{f.value_num:,.6g}"
                 a1, a2, a3 = st.columns([4, 1, 1])
-                a1.markdown(f"**{f.key}** {f.metal or ''} = `{val}` {f.unit or ''} (p.{f.page})  \n_{f.quote}_")
+                a1.markdown(f"**{f.key}** {f.metal or ''} = `{show(f)}` {f.unit or ''} (p.{f.page})  \n_{f.quote}_")
                 if a2.button("Right", key=f"ap{f.id}"):
                     with db.session_scope(engine) as s2:
                         review.record_audit(s2, f.id, True)
@@ -73,9 +83,8 @@ def page_review():
         if not rows:
             st.success("Nothing here.")
         for f in rows:
-            val = f.value_text if f.value_text is not None else f"{f.value_num:,.6g}" if f.value_num is not None else "-"
             flag = {"quote_found": "✅", "number_not_in_quote": "⚠️", "quote_not_found": "❌"}.get(f.auto_check or "", "")
-            title = f"{flag} #{f.id}  {f.key}  {f.metal or ''} {f.category or ''}  =  {val} {f.unit or ''} {f.currency or ''}   (p.{f.page})"
+            title = f"{flag} #{f.id}  {f.key}  {f.metal or ''} {f.category or ''}  =  {show(f)} {f.unit or ''}   (p.{f.page})"
             with st.expander(title, expanded=False):
                 st.markdown(f"**Quote from the document:** _{f.quote}_")
                 if f.as_written:

@@ -158,13 +158,27 @@ def normalise_text(s: str) -> str:
 _NUM = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
 
 
+_ONES = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+         "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
+         "eighteen": 18, "nineteen": 19}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+_WORD = re.compile(r"\b(" + "|".join(list(_TENS) + list(_ONES)) + r")(?:[\s-]+(" + "|".join(k for k in _ONES if _ONES[k] < 10 and _ONES[k] > 0) + r"))?\b", re.I)
+
+
 def numbers_in(text: str) -> list[float]:
+    """Numbers written as digits ('1,332') or as small words ('nine', 'twenty-five') in a quote."""
     out = []
     for m in _NUM.findall(text or ""):
         try:
             out.append(float(m.replace(",", "")))
         except ValueError:
             pass
+    for m in _WORD.finditer(text or ""):
+        first, second = m.group(1).lower(), (m.group(2) or "").lower()
+        if first in _TENS:
+            out.append(float(_TENS[first] + (_ONES[second] if second else 0)))
+        elif first in _ONES and not second:
+            out.append(float(_ONES[first]))
     return out
 
 

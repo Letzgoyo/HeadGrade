@@ -151,3 +151,15 @@ def test_as_written_keeps_readable_numbers(session):
     from sqlalchemy import select
     written = {r.key: r.as_written for r in s.scalars(select(db.Fact))}
     assert written["shares_basic"] == "1,332,417,631" and written["revenue_ttm"] == "3,061,238 US$ thousands"
+
+
+def test_numbers_written_as_words_are_understood():
+    assert numbers_in("the mine life at current production is nine years") == [9.0]
+    assert numbers_in("management has previously built three mines") == [3.0]
+    assert numbers_in("a twenty-five percent interest and 4.5% of shares") == [4.5, 25.0]
+    assert numbers_in("a twenty five year term") == [25.0]
+    assert numbers_in("eleven royalties") == [11.0] and numbers_in("no numbers here") == []
+    f = ExtractedFact(key="reserve_life_years", value=9.0, unit="years", page=1, quote="the mine life at current production is nine years")
+    assert verify_fact(f, ["Based on mineral reserves, the mine life at current production is nine years."]) == ("quote_found", 1)
+    wrong = ExtractedFact(key="reserve_life_years", value=8.0, unit="years", page=1, quote="the mine life at current production is nine years")
+    assert verify_fact(wrong, ["the mine life at current production is nine years"])[0] == "number_not_in_quote"

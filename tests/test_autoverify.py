@@ -65,6 +65,7 @@ def test_second_reading_conflict_goes_to_a_person_with_the_reason(world):
     st = av.apply(s, co, d1.id, [EF(key="cash", value=387.0, unit="US$ millions", page=1, quote="x")])
     assert f.status == "unverified" and st.needs_review == 1
     assert "NEEDS REVIEW" in f.note and not checks(f)["second_reading"]["passed"]
+    assert "387.000M" in f.note and "287.000M" in f.note       # the reviewer sees BOTH values, not just "different"
     assert review.priority(f) == 0                        # shown first in the review queue
 
 
