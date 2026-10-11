@@ -44,6 +44,21 @@ def main(argv=None) -> int:
     fr.add_argument("pdf"); fr.add_argument("--edition", default="2025")
     fr.add_argument("--first-page", type=int, default=15); fr.add_argument("--last-page", type=int, default=28)
     sub.add_parser("jurisdictions-list")
+    ca = sub.add_parser("company-add-sec", help="add a company from SEC data by US ticker (name, CIK, exchange; stage inferred later)")
+    ca.add_argument("ticker"); ca.add_argument("--held", action="store_true"); ca.add_argument("--sponsored", action="store_true")
+    ck = sub.add_parser("company-set-cik"); ck.add_argument("ticker"); ck.add_argument("cik")
+    pr = sub.add_parser("price-set"); pr.add_argument("ticker"); pr.add_argument("price", type=float); pr.add_argument("currency"); pr.add_argument("--date")
+    fx = sub.add_parser("fx-set"); fx.add_argument("currency"); fx.add_argument("usd_per_unit", type=float); fx.add_argument("--date")
+    sub.add_parser("fx-fetch-boc", help="fetch USD/CAD from the Bank of Canada (free, no key)")
+    un = sub.add_parser("universe-scan-sec", help="find mining companies among SEC filers (resumable; cached)")
+    un.add_argument("--limit", type=int, default=500); un.add_argument("--sic", nargs="*", default=None)
+    wk = sub.add_parser("weekly", help="fetch new filings, read them twice, auto-verify, rebuild cards")
+    wk.add_argument("--ticker", nargs="*"); wk.add_argument("--since-days", type=int, default=400); wk.add_argument("--max-docs", type=int, default=8)
+    wk.add_argument("--single-reading", action="store_true", help="skip the second independent reading (cheaper, fewer auto-verified facts)")
+    wk.add_argument("--human-only", action="store_true", help="cards use only facts a person verified")
+    qu = sub.add_parser("queue", help="facts that need a person"); qu.add_argument("--ticker"); qu.add_argument("--limit", type=int, default=30)
+    au = sub.add_parser("audit-sample"); au.add_argument("--rate", type=float, default=0.02)
+    sub.add_parser("audit-stats")
     d = sub.add_parser("deck-set"); d.add_argument("--name", default="spot"); d.add_argument("--as-of", default=str(date.today()))
     d.add_argument("prices", nargs="+", help="au=4600 ag=52 cu=5.2 ...")
     j = sub.add_parser("jurisdiction-set"); j.add_argument("name"); j.add_argument("score", type=float); j.add_argument("--source", default="manual")
@@ -82,6 +97,59 @@ def main(argv=None) -> int:
         elif a.cmd == "jurisdictions-list":
             for r in s.scalars(select(JurisdictionScore).order_by(JurisdictionScore.score.desc())):
                 print(f"{r.score:6.2f}  IAI {r.iai if r.iai is not None else '-':>6}  {r.name}" + ("  (low sample)" if r.low_sample else ""))
+        elif a.cmd == "company-add-sec":
+            from .edgar import Edgar
+            e = Edgar()
+            cik = e.cik_for_ticker(a.ticker)
+            if not cik:
+                sys.exit(f"{a.ticker} not found in the SEC ticker list")
+            sub_ = e.submissions(cik)
+            s.add(Company(name=sub_.get("name") or a.ticker, ticker=a.ticker.upper(), cik=cik, exchange=(sub_.get("exchanges") or [None])[0],
+                          stage="explorer", stage_auto=True, currency="USD", held_by_owner=a.held, sponsored=a.sponsored, primary_metals=""))
+            print("added", a.ticker.upper(), cik, sub_.get("name"), "SIC", sub_.get("sic"))
+        elif a.cmd == "company-set-cik":
+            _co(s, a.ticker).cik = a.cik.zfill(10)
+        elif a.cmd == "price-set":
+            from . import prices
+            prices.set_price(s, a.ticker, a.price, a.currency, date.fromisoformat(a.date) if a.date else None)
+        elif a.cmd == "fx-set":
+            from . import prices
+            prices.set_fx(s, a.currency, a.usd_per_unit, date.fromisoformat(a.date) if a.date else None)
+        elif a.cmd == "fx-fetch-boc":
+            from . import prices, providers
+            d, rate = prices.fetch_boc(lambda u: providers._http_get(u).encode())
+            prices.set_fx(s, "CAD", rate, d, "Bank of Canada Valet")
+            print(f"USD per CAD {rate:.5f} on {d}")
+        elif a.cmd == "universe-scan-sec":
+            from . import universe
+            from .edgar import Edgar
+            print(universe.scan_sec(Edgar(), s, tuple(a.sic) if a.sic else universe.MINING_SIC, a.limit))
+        elif a.cmd == "weekly":
+            import anthropic
+            from . import config, weekly
+            from .edgar import Edgar
+            client = anthropic.Anthropic()
+            reader_b = None if a.single_reading else client
+            out = weekly.run_weekly(engine, Edgar(), client, reader_b, a.ticker, since_days=a.since_days, max_docs_per_filing=a.max_docs,
+                                    model_a=config.MODEL, model_b=config.MODEL_B, human_only=a.human_only)
+            for r in out["results"]:
+                print(f"{r.get('ticker'):8} filings {r.get('filings_new', 0)} docs {r.get('docs', 0)} facts {r.get('facts', 0)} "
+                      f"auto-verified {r.get('auto_verified', 0)} need-review {r.get('needs_review', 0)} stage {r.get('stage')} "
+                      f"card {r.get('card_status', '')} Q:{r.get('quality', '')} V:{r.get('valuation', '')}")
+                for e in r.get("errors", []):
+                    print("   !", e)
+            print(f"{out['companies']} companies, {out['docs']} documents, {out['auto_verified']} auto-verified, {out['needs_review']} need review, {out['errors']} errors")
+        elif a.cmd == "queue":
+            from . import review
+            cid = _co(s, a.ticker).id if a.ticker else None
+            for x in review.queue(s, cid, "unverified", needs_attention=True, limit=a.limit):
+                print(f"#{x.id:<5} p{review.priority(x)} {x.key:26} {x.metal or '':4} {x.value_text if x.value_text is not None else x.value_num!s:>16}  {x.note or ''}")
+        elif a.cmd == "audit-sample":
+            from . import review
+            print("flagged for audit:", review.sample_for_audit(s, a.rate))
+        elif a.cmd == "audit-stats":
+            from . import review
+            print(review.audit_stats(s))
         elif a.cmd == "deck-set":
             prices = _kv(a.prices)
             bad = [m for m in prices if m not in METALS]

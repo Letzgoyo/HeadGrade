@@ -60,6 +60,7 @@ DOC_KEYS = {
     "technical_report": lambda s: s.scope == "project" or s.key in ("tax_rate", "recovery"),
     "financials": lambda s: s.scope == "company",
     "mdna": lambda s: s.scope == "company",
+    "aif": lambda s: True,
     "presentation": lambda s: True,
     "press_release": lambda s: True,
     "other": lambda s: True,
@@ -75,6 +76,8 @@ KEYWORDS = {
     "presentation": ["resource", "reserve", "npv", "irr", "capex", "production", "aisc", "cash", "debt", "shares", "ownership", "permit"],
 }
 KEYWORDS["mdna"] = KEYWORDS["financials"]
+KEYWORDS["aif"] = ["mineral reserve", "mineral resource", "proven", "probable", "directors and officers", "mine life", "royalt", "permit",
+                   "shares", "jurisdiction", "ownership", "production", "feasibility", "technical report"]
 KEYWORDS["press_release"] = KEYWORDS["presentation"]
 KEYWORDS["other"] = KEYWORDS["presentation"]
 

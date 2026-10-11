@@ -14,10 +14,12 @@ from .facts import F, FactBook
 from .registry import METALS
 
 
-def load_factbook(session: Session, company: Company, verified_only: bool = False) -> FactBook:
+def load_factbook(session: Session, company: Company, verified_only: bool = False, human_only: bool = False) -> FactBook:
     rows = session.scalars(select(Fact).where(Fact.company_id == company.id)).all()
+    if human_only:  # ignore anything a machine verified: only a person's sign-off counts
+        rows = [r for r in rows if not (r.status == "verified" and r.verified_by == "auto")]
     facts = [F(r.key, r.value_num, r.value_text, r.unit, r.currency, r.metal, r.category, r.project_id, r.as_of, r.status,
-               r.confidence, r.id, r.doc_id, r.page, r.quote, r.id) for r in rows]
+               r.confidence, r.id, r.doc_id, r.page, r.quote, r.id, r.verified_by) for r in rows]
     return FactBook(facts, include_unverified=not verified_only)
 
 
@@ -34,10 +36,10 @@ def jurisdiction_table(session: Session) -> dict[str, float]:
 
 
 def build_card(session: Session, company: Company, deck: Deck, market: V.Market, publish: bool = False,
-               today: date | None = None) -> dict:
+               today: date | None = None, human_only: bool = False) -> dict:
     """publish=True uses ONLY facts a human has verified (or overridden). Draft mode includes unverified facts and says so."""
     today = today or date.today()
-    fb = load_factbook(session, company, verified_only=publish)
+    fb = load_factbook(session, company, verified_only=publish, human_only=human_only)
     projects = [V.Proj(p.id, p.name, p.primary_metal) for p in company.projects]
     primary = (company.primary_metals.split(",")[0].strip() or "au") if company.primary_metals else "au"
     benchmarks = list(session.scalars(select(Benchmark)))
@@ -65,7 +67,7 @@ def build_card(session: Session, company: Company, deck: Deck, market: V.Market,
         seen.add(u.fact_id)
         r = rows[u.fact_id]
         d = docs.get(r.doc_id)
-        evidence.append({"label": u.label, "value": r.as_written or (r.value_text or r.value_num), "status": r.status, "unit": r.unit, "currency": r.currency,
+        evidence.append({"label": u.label, "value": r.as_written or (r.value_text or r.value_num), "status": r.status, "verified_by": r.verified_by, "unit": r.unit, "currency": r.currency,
                          "value_raw": r.value_num if r.value_num is not None else r.value_text,
                          "document": d.title if d else None, "document_date": str(d.effective_date) if d and d.effective_date else None,
                          "page": r.page, "quote": r.quote, "url": d.url if d else None})

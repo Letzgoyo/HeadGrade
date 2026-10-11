@@ -5,4 +5,5 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.getenv("HEADGRADE_DATA_DIR", ROOT / "data"))
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'headgrade.db'}")
 MODEL = os.getenv("HEADGRADE_MODEL", "claude-opus-5-5")
+MODEL_B = os.getenv("HEADGRADE_MODEL_B", "claude-sonnet-5-5")   # the second, independent reading
 EFFORT = os.getenv("HEADGRADE_EFFORT", "medium")

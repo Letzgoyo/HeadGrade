@@ -1,6 +1,4 @@
-import os
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -57,29 +55,28 @@ def test_page_text_returns_the_cited_page(world):
 
 
 def test_review_app_pages_render_and_verify_button_works(tmp_path, monkeypatch):
-    monkeypatch.setenv("HEADGRADE_DATA_DIR", str(tmp_path))
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 't.db'}")
-    for m in [k for k in sys.modules if k.startswith("headgrade")]:
-        del sys.modules[m]
-    from headgrade import db as db2
+    from headgrade import config
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(config, "DATABASE_URL", f"sqlite:///{tmp_path / 't.db'}")
     from streamlit.testing.v1 import AppTest
-    eng = db2.make_engine()
-    db2.init_db(eng)
-    with db2.session_scope(eng) as s:
-        from examples.demo_data import build as b2
-        b2(s, verified=False)
+    eng = db.make_engine()
+    db.init_db(eng)
+    with db.session_scope(eng) as s:
+        build(s, verified=False)
     app = str(Path(__file__).resolve().parent.parent / "review_app.py")
-    for page in ("Review queue", "Card preview", "Companies & documents", "Decks & benchmarks"):
+    for page in ("Review queue", "Pipeline status", "Card preview", "Companies & documents", "Decks & benchmarks"):
         at = AppTest.from_file(app, default_timeout=60)
         at.run()
         at.sidebar.radio[0].set_value(page).run()
         assert not at.exception, (page, [e.value for e in at.exception])
     at = AppTest.from_file(app, default_timeout=60)
     at.run()
+    at.checkbox[0].set_value(False).run()          # show everything, not just items that need attention
     verify = [b for b in at.button if b.label == "Verify"]
     assert verify
     verify[0].click()
     at.run()
-    assert not at.exception
-    with db2.session_scope(eng) as s:
-        assert s.scalar(select(db2.Fact).where(db2.Fact.status == "verified")) is not None
+    assert not at.exception, [e.value for e in at.exception]
+    with db.session_scope(eng) as s:
+        done = s.scalar(select(db.Fact).where(db.Fact.status == "verified"))
+        assert done is not None and done.verified_by == "human"

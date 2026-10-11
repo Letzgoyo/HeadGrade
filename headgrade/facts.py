@@ -26,6 +26,7 @@ class F:
     page: int | None = None
     quote: str | None = None
     created_order: int = 0
+    verified_by: str | None = None
 
 
 @dataclass
@@ -36,6 +37,7 @@ class Used:
     value: float | str | None
     status: str
     fact_id: int | None = None
+    by: str | None = None
 
 
 class FactBook:
@@ -61,7 +63,7 @@ class FactBook:
             return None
         f = m[0]
         if record:
-            self.used.append(Used(key, lab, f.value_num if f.value_num is not None else f.value_text, f.status, f.id))
+            self.used.append(Used(key, lab, f.value_num if f.value_num is not None else f.value_text, f.status, f.id, f.verified_by))
         return f
 
     def num(self, key, default=None, **kw) -> float | None:
@@ -79,5 +81,6 @@ class FactBook:
         """Share of the inputs actually used that you have verified (or overridden)."""
         n = len(self.used)
         ok = sum(1 for u in self.used if u.status in ("verified", "override"))
+        auto = sum(1 for u in self.used if u.status == "verified" and u.by == "auto")
         return {"inputs_used": n, "verified": ok, "unverified": n - ok, "missing": len(set(self.missing)),
-                "verified_share": round(ok / n, 2) if n else 0.0}
+                "verified_share": round(ok / n, 2) if n else 0.0, "auto_verified": auto, "human_verified": ok - auto}

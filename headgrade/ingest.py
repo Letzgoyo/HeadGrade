@@ -50,8 +50,18 @@ def _project(session: Session, company: Company, name: str | None, notes: list[s
     return p
 
 
-def to_row(ef: ExtractedFact, company: Company, project: Project | None, doc: Document, page: int | None,
-           auto_check: str) -> tuple[Fact, list[str]]:
+@dataclass
+class Norm:
+    value_num: float | None
+    value_text: str | None
+    unit: str | None
+    currency: str | None
+    notes: list
+
+
+def normalise_value(ef: ExtractedFact) -> Norm:
+    """Pure: turn an extracted fact's value/unit 'as written' into canonical units. Used for storing facts and for
+    comparing two independent readings of the same document."""
     spec = REGISTRY[ef.key]
     notes: list[str] = []
     value_num, unit, ccy, text = None, None, None, ef.text
@@ -88,6 +98,13 @@ def to_row(ef: ExtractedFact, company: Company, project: Project | None, doc: Do
                     notes.append(f"unit '{raw_unit}' is not {want}: value may be wrong")
             if spec.family == "currency" and ccy is None:
                 notes.append("currency not stated in the unit: check")
+    return Norm(value_num, text, unit, ccy, notes)
+
+
+def to_row(ef: ExtractedFact, company: Company, project: Project | None, doc: Document, page: int | None,
+           auto_check: str) -> tuple[Fact, list[str]]:
+    n = normalise_value(ef)
+    notes = list(n.notes)
     as_of = None
     if ef.as_of:
         try:
@@ -101,11 +118,12 @@ def to_row(ef: ExtractedFact, company: Company, project: Project | None, doc: Do
     elif auto_check == "number_not_in_quote":
         conf = 0.3
         notes.append("the stated number does not appear in the quote")
-    if any(("not" in n and "recognised" in n) or "may be wrong" in n or "check" in n for n in notes):
+    if any(("not" in x and "recognised" in x) or "may be wrong" in x or "check" in x for x in notes):
         conf = min(conf, 0.5)
     row = Fact(company_id=company.id, project_id=project.id if project else None, key=ef.key, metal=ef.metal, category=ef.category,
-               value_num=value_num, value_text=text, unit=unit, currency=ccy, as_of=as_of or doc.effective_date, doc_id=doc.id,
-               page=page, quote=ef.quote[:600], as_written=(f"{ef.value:,.12g} {ef.unit or ''}".strip() if ef.value is not None else None),
+               value_num=n.value_num, value_text=n.value_text, unit=n.unit, currency=n.currency, as_of=as_of or doc.effective_date,
+               doc_id=doc.id, page=page, quote=ef.quote[:600],
+               as_written=(f"{ef.value:,.12g} {ef.unit or ''}".strip() if ef.value is not None else None),
                confidence=conf, status=status, auto_check=auto_check, note="; ".join(notes) or None)
     return row, notes
 

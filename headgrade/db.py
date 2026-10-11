@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, event
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
 from . import config
@@ -31,6 +31,9 @@ class Company(Base):
     sponsored: Mapped[bool] = mapped_column(default=False)  # must be disclosed on the card
     held_by_owner: Mapped[bool] = mapped_column(default=False)  # must be disclosed on the card
     notes: Mapped[str | None] = mapped_column(Text)
+    cik: Mapped[str | None] = mapped_column(String(10))          # SEC identifier, for automatic filing retrieval
+    stage_auto: Mapped[bool] = mapped_column(default=False)      # stage was inferred from facts, not set by a person
+    last_filing_seen: Mapped[date | None] = mapped_column(Date)
     projects: Mapped[list["Project"]] = relationship(back_populates="company", cascade="all, delete-orphan")
 
 
@@ -80,6 +83,9 @@ class Fact(Base):
     auto_check: Mapped[str | None] = mapped_column(String(40))  # quote_found | quote_not_found | number_not_in_quote
     note: Mapped[str | None] = mapped_column(Text)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime)
+    verified_by: Mapped[str | None] = mapped_column(String(10))   # human | auto
+    checks: Mapped[str] = mapped_column(Text, default="[]")       # JSON list of {name, passed, detail}
+    audited: Mapped[str | None] = mapped_column(String(10))       # pending | pass | fail (spot-checks of auto-verified facts)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
@@ -135,6 +141,53 @@ class Snapshot(Base):
     card_json: Mapped[str] = mapped_column(Text)  # the whole card as published that week
     quality_score: Mapped[float | None] = mapped_column(Float)
     value_score: Mapped[float | None] = mapped_column(Float)
+
+
+class Filing(Base):
+    """A regulator filing we have seen, so the weekly job is idempotent and every document has a paper trail."""
+    __tablename__ = "filings"
+    __table_args__ = (UniqueConstraint("company_id", "accession"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), index=True)
+    accession: Mapped[str] = mapped_column(String(30))
+    source: Mapped[str] = mapped_column(String(20), default="edgar")
+    form: Mapped[str] = mapped_column(String(20))
+    filed: Mapped[date | None] = mapped_column(Date)
+    period: Mapped[date | None] = mapped_column(Date)
+    url: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(12), default="new")   # new | processed | skipped | error
+    error: Mapped[str | None] = mapped_column(Text)
+    n_docs: Mapped[int] = mapped_column(Integer, default=0)
+    n_facts: Mapped[int] = mapped_column(Integer, default=0)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class JobRun(Base):
+    __tablename__ = "job_runs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(30))
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+    summary_json: Mapped[str] = mapped_column(Text, default="{}")
+
+
+class MarketPrice(Base):
+    __tablename__ = "market_prices"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(40), index=True)
+    price: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3))
+    as_of: Mapped[date] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(60), default="manual")
+
+
+class FxRate(Base):
+    __tablename__ = "fx_rates"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    currency: Mapped[str] = mapped_column(String(3), index=True)
+    usd_per_unit: Mapped[float] = mapped_column(Float)
+    as_of: Mapped[date] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(60), default="manual")
 
 
 def make_engine(url: str | None = None):

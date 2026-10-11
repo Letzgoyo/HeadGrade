@@ -141,7 +141,7 @@ def render_html(card: dict, changes: list[str] | None = None) -> str:
     h.append("<div class='grades'>"
              f"<div class='g'><span>Quality</span><b>{g['quality_grade']}</b><div class='mut small'>{num(g['quality_score'], 0) if g['quality_score'] is not None else 'not enough data'}</div></div>"
              f"<div class='g'><span>Valuation</span><b>{g['value_grade']}</b><div class='mut small'>{num(g['value_score'], 0) if g['value_score'] is not None else 'not rated'}</div></div>"
-             f"<div class='g'><span>Confidence</span><b style='font-size:22px'>{escape(conf['level'])}</b><div class='mut small'>{conf['verified']} of {conf['inputs_used']} inputs verified</div></div></div>")
+             f"<div class='g'><span>Confidence</span><b style='font-size:22px'>{escape(conf['level'])}</b><div class='mut small'>{conf['verified']} of {conf['inputs_used']} inputs verified ({conf.get('human_verified', 0)} by a person, {conf.get('auto_verified', 0)} automatically)</div></div></div>")
     h.append(f"<p><b>{escape(g['quadrant'])}.</b> <span class='mut'>Price {card['market']['price']:,.2f} {card['market']['currency']}"
              f" as of {escape(card['market']['price_date'] or 'n/a')}. Metal prices (deck '{escape(card['deck']['name'])}', {escape(card['deck']['as_of'] or 'n/a')}): "
              + ", ".join(f"{k.upper()} {val:,.2f}" for k, val in card["deck"]["prices"].items()) + ".</span></p>")
@@ -163,8 +163,9 @@ def render_html(card: dict, changes: list[str] | None = None) -> str:
     h.append("<h2>Sources</h2><table><tr><th>Input</th><th>Value</th><th>Check</th><th>Source</th></tr>")
     for e in card["evidence"]:
         ok = e["status"] in ("verified", "override")
+        label = "verified (auto)" if e["status"] == "verified" and e.get("verified_by") == "auto" else e["status"]
         src = f"{escape(e['document'] or '?')}, p.{e['page']}" + (f"<br><q class='small'>{escape((e['quote'] or '')[:220])}</q>" if e["quote"] else "")
-        h.append(f"<tr><td>{escape(e['label'])}</td><td>{escape(fmt_value(e))}</td><td><span class='pill {'ok' if ok else 'bad'}'>{escape(e['status'])}</span></td><td class='small'>{src}</td></tr>")
+        h.append(f"<tr><td>{escape(e['label'])}</td><td>{escape(fmt_value(e))}</td><td><span class='pill {'ok' if ok else 'bad'}'>{escape(label)}</span></td><td class='small'>{src}</td></tr>")
     h.append("</table><p class='small mut'>General information and modelled estimates from public documents, not personal financial advice. "
              "Grades are produced by a published method from the inputs shown and can be wrong. Do your own research.</p>"
              f"<p class='small mut'>Generated {escape(card['generated_at'])}</p></main></body></html>")

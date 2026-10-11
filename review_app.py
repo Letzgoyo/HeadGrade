@@ -20,7 +20,7 @@ st.set_page_config(page_title="HeadGrade review", page_icon="⛏️", layout="wi
 engine = db.make_engine()
 db.init_db(engine)
 
-PAGES = ["Review queue", "Card preview", "Companies & documents", "Decks & benchmarks"]
+PAGES = ["Review queue", "Pipeline status", "Card preview", "Companies & documents", "Decks & benchmarks"]
 page = st.sidebar.radio("View", PAGES)
 st.sidebar.caption("Private admin screen. Draft cards use unverified facts; published cards use only what you verify.")
 
@@ -51,9 +51,25 @@ def page_review():
                    text=f"{p['verified'] + p['override']} of {p['total']} facts verified; {p['critical_unreviewed']} critical inputs still to review; {p['rejected']} rejected")
         c1, c2, c3 = st.columns(3)
         status = c1.selectbox("Show", ["unverified", "verified", "override", "rejected", "all"])
-        crit = c2.checkbox("Critical inputs only", value=True)
+        attention = c2.checkbox("Only what needs me (conflicts, failed checks, audits)", value=True)
+        crit = c2.checkbox("Critical inputs only", value=not attention)
         key_q = c3.text_input("Filter by key", "")
-        rows = review.queue(s, co.id, status, crit, key_q, limit=40)
+        audits = review.audit_queue(s, co.id)
+        if audits:
+            st.subheader(f"Spot-checks ({len(audits)}): is the machine's value right?")
+            for f in audits[:10]:
+                val = f.value_text if f.value_text is not None else f"{f.value_num:,.6g}"
+                a1, a2, a3 = st.columns([4, 1, 1])
+                a1.markdown(f"**{f.key}** {f.metal or ''} = `{val}` {f.unit or ''} (p.{f.page})  \n_{f.quote}_")
+                if a2.button("Right", key=f"ap{f.id}"):
+                    with db.session_scope(engine) as s2:
+                        review.record_audit(s2, f.id, True)
+                    st.rerun()
+                if a3.button("Wrong", key=f"af{f.id}"):
+                    with db.session_scope(engine) as s2:
+                        review.record_audit(s2, f.id, False)
+                    st.rerun()
+        rows = review.queue(s, co.id, status, crit, key_q, limit=40, needs_attention=attention and status == "unverified")
         if not rows:
             st.success("Nothing here.")
         for f in rows:
@@ -66,6 +82,8 @@ def page_review():
                     st.caption(f"As written: {f.as_written}  |  automatic check: {f.auto_check}  |  confidence {f.confidence:.1f}")
                 if f.note:
                     st.warning(f.note)
+                for c in json.loads(f.checks or "[]"):
+                    st.caption(("✅ " if c["passed"] else "❌ ") + c["name"].replace("_", " ") + (f": {c['detail']}" if c["detail"] else ""))
                 ctx = review.page_text(s, f, context=0)
                 if ctx and st.toggle("Show the page text", key=f"pg{f.id}"):
                     st.text_area("Page", ctx, height=260, key=f"pgt{f.id}", label_visibility="collapsed")
@@ -87,6 +105,30 @@ def page_review():
                             except ValueError:
                                 review.override(s2, f.id, text=nv.strip())
                         st.rerun()
+
+
+# ------------------------------------------------------------------ pipeline status
+def page_pipeline():
+    from sqlalchemy import func
+    from headgrade.db import Filing, JobRun
+    st.header("Pipeline status")
+    with db.session_scope(engine) as s:
+        rows = s.execute(select(Fact.status, Fact.verified_by, func.count()).group_by(Fact.status, Fact.verified_by)).all()
+        st.subheader("Facts")
+        st.table([{"status": r[0], "verified by": r[1] or "-", "count": r[2]} for r in rows])
+        a = review.audit_stats(s)
+        st.subheader("Spot-check accuracy of automatic verification")
+        st.write(f"{a['audited']} audited, {a['failed']} wrong, {a['pending']} waiting. " +
+                 (f"Error rate {100 * a['error_rate']:.1f}%." if a["error_rate"] is not None else "No audits finished yet."))
+        st.subheader("Recent weekly runs")
+        for j in s.scalars(select(JobRun).order_by(JobRun.id.desc()).limit(5)):
+            d = json.loads(j.summary_json or "{}")
+            st.write(f"{j.started_at:%Y-%m-%d %H:%M}: {d.get('companies', '?')} companies, {d.get('docs', '?')} documents, "
+                     f"{d.get('auto_verified', '?')} auto-verified, {d.get('needs_review', '?')} need review, {d.get('errors', '?')} errors")
+        errs = list(s.scalars(select(Filing).where(Filing.status == "error").order_by(Filing.id.desc()).limit(20)))
+        if errs:
+            st.subheader("Filings that failed")
+            st.table([{"company": f.company_id, "accession": f.accession, "form": f.form, "error": (f.error or "")[:120]} for f in errs])
 
 
 # ------------------------------------------------------------------ card preview
@@ -196,4 +238,4 @@ def page_decks():
         st.caption("Add benchmarks with: python -m headgrade.cli benchmark-add --kind peer_ev_per_unit --metal au --stage explorer --p25 .. --median .. --p75 .. --n .. --source ..")
 
 
-{"Review queue": page_review, "Card preview": page_card, "Companies & documents": page_companies, "Decks & benchmarks": page_decks}[page]()
+{"Review queue": page_review, "Pipeline status": page_pipeline, "Card preview": page_card, "Companies & documents": page_companies, "Decks & benchmarks": page_decks}[page]()

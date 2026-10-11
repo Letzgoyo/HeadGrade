@@ -30,9 +30,41 @@ python -m headgrade.cli init
 python -m headgrade.cli deck-set au=... ag=... cu=...        # you set the metal prices; there are no built-in ones
 python -m headgrade.cli company-add --name "..." --ticker XXX.TO --stage developer --metals au,ag --jurisdiction Nevada --held
 streamlit run review_app.py            # add documents, review facts, preview cards
-pytest                                 # 42 tests, all on FICTIONAL data (examples/demo_data.py)
+pytest                                 # 80 tests, all on FICTIONAL data (examples/demo_data.py)
 python examples/make_demo_card.py card.html
 ```
+
+## Automation (the weekly job)
+One command per week, no manual document handling:
+```
+python -m headgrade.cli weekly [--ticker BTG ...]
+```
+For each company it: (1) finds new SEC filings (6-K, 40-F, 20-F, 10-K, 10-Q), (2) downloads each document and classifies it
+(technical report, MD&A, financial statements, results release, annual information form), (3) reads it with Claude, (4) checks every
+quote is on the page, (5) reads it AGAIN with a different model and compares, (6) cross-checks numbers across documents and
+arithmetic (measured + indicated = M&I, IRR vs NPV vs discount rate, sane ranges), (7) **auto-verifies** a fact only when an
+independent check agrees and nothing contradicts it, (8) infers the company's stage and metals from its facts, (9) rebuilds the card
+from verified facts only and records what changed. A person only sees conflicts, failed range checks, and random spot-checks
+(`python -m headgrade.cli queue`, or the review screen). Spot-checks measure the machine's real error rate
+(`audit-sample`, `audit-stats`). A failed spot-check pulls that fact back out of published cards.
+
+Needs two secrets: `ANTHROPIC_API_KEY` and `SEC_USER_AGENT` (your name and email; the SEC requires it).
+
+**B2Gold, start to finish (on Replit):**
+```
+python -m headgrade.cli init
+python -m headgrade.cli company-add-sec BTG --held
+python -m headgrade.cli deck-set au=<today's gold price>
+python -m headgrade.cli price-set BTG <share price> USD
+python -m headgrade.cli jurisdictions-load-fraser <path to the Fraser survey PDF>      # once a year
+python -m headgrade.cli weekly --ticker BTG
+python -m headgrade.cli queue --ticker BTG
+streamlit run review_app.py
+```
+Other commands: `universe-scan-sec` (find mining companies among SEC filers), `company-set-cik`, `price-set`, `fx-set`, `fx-fetch-boc`.
+
+**Coverage today:** companies that file with the SEC (many TSX/ASX names that cross-list file 40-F/6-K). Companies listed only on
+SEDAR+ (most TSX-V/CSE juniors) or only on the ASX are NOT covered yet: SEDAR+ has no official API and its terms must be checked.
 
 ## Jurisdiction scores (Fraser Institute)
 `python -m headgrade.cli jurisdictions-load-fraser <Fraser Annual Survey of Mining Companies PDF>` loads all 68 jurisdictions
@@ -45,12 +77,13 @@ share of production/NAV, and 20%+ exposure to a jurisdiction scoring under 40 ra
 Only needed to read documents. Create a key at console.anthropic.com and store it as a secret named `ANTHROPIC_API_KEY`
 (on Replit: the Secrets tool, never in code or chat). Costs are per document read; see the cost notes in the project plan.
 
-## Next (automation)
-Company universe from public lists, filing fetchers (SEC EDGAR first, ASX next), a second independent reading plus arithmetic
-and cross-document checks so only conflicts need a person, a weekly scheduler, and a licensed price/metal feed.
+## Next
+ASX and Canadian (SEDAR+) document sources, a licensed price/metal feed, scheduling (Replit Scheduled Deployment), and peer
+benchmarks computed from the companies we cover.
 
 ## Honest limits
-- **Never run against a real document or the live Claude API yet.** Built and tested with fictional data and a fake client.
+- **Never run against live SEC data or the live Claude API yet.** Built and tested with recorded-format fixtures, fake SEC responses
+  and fake readers. Expect small fixes on the first real run (SEC response formats, HTML tables, model output).
 - The **price-to-NAV ranges by study stage and the producer anchors are rule-of-thumb placeholders** (`assumptions.py`),
   printed on every card. Replace them with measured peer data.
 - Explorers and royalty companies cannot be valued until peer benchmarks exist in the database.
