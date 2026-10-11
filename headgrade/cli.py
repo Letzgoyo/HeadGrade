@@ -56,6 +56,8 @@ def main(argv=None) -> int:
     wk.add_argument("--ticker", nargs="*"); wk.add_argument("--since-days", type=int, default=400); wk.add_argument("--max-docs", type=int, default=8)
     wk.add_argument("--single-reading", action="store_true", help="skip the second independent reading (cheaper, fewer auto-verified facts)")
     wk.add_argument("--human-only", action="store_true", help="cards use only facts a person verified")
+    wk.add_argument("--dry-run", action="store_true", help="free: list the filings and documents that WOULD be read; no Claude calls, nothing saved")
+    wk.add_argument("--max-total-docs", type=int, help="cost cap: stop after reading this many documents; the next run continues where this stopped")
     qu = sub.add_parser("queue", help="facts that need a person"); qu.add_argument("--ticker"); qu.add_argument("--limit", type=int, default=30)
     au = sub.add_parser("audit-sample"); au.add_argument("--rate", type=float, default=0.02)
     sub.add_parser("audit-stats")
@@ -128,11 +130,22 @@ def main(argv=None) -> int:
             import anthropic
             from . import config, weekly
             from .edgar import Edgar
-            client = anthropic.Anthropic()
-            reader_b = None if a.single_reading else client
+            client = None if a.dry_run else anthropic.Anthropic()
+            reader_b = None if a.single_reading or a.dry_run else client
             out = weekly.run_weekly(engine, Edgar(), client, reader_b, a.ticker, since_days=a.since_days, max_docs_per_filing=a.max_docs,
-                                    model_a=config.MODEL, model_b=config.MODEL_B, human_only=a.human_only)
+                                    model_a=config.MODEL, model_b=config.MODEL_B, human_only=a.human_only, dry_run=a.dry_run,
+                                    max_total_docs=a.max_total_docs)
+            if a.dry_run:
+                for r in out["results"]:
+                    print(f"{r.get('ticker')}: {r.get('filings_new', 0)} new filings, {r.get('docs', 0)} readable documents (nothing sent to Claude)")
+                    for line in r.get("preview", []):
+                        print("   ", line)
+                    for e in r.get("errors", []):
+                        print("   !", e)
+                return 0
             for r in out["results"]:
+                if r.get("stopped_by_cap"):
+                    print(f"   (document cap reached for {r.get('ticker')}: run again to continue)")
                 print(f"{r.get('ticker'):8} filings {r.get('filings_new', 0)} docs {r.get('docs', 0)} facts {r.get('facts', 0)} "
                       f"auto-verified {r.get('auto_verified', 0)} need-review {r.get('needs_review', 0)} stage {r.get('stage')} "
                       f"card {r.get('card_status', '')} Q:{r.get('quality', '')} V:{r.get('valuation', '')}")

@@ -30,6 +30,8 @@ class CompanyRun:
     quality: str = ""
     valuation: str = ""
     changes: list = field(default_factory=list)
+    preview: list = field(default_factory=list)     # dry run: what would be read
+    stopped_by_cap: bool = False
 
     def as_dict(self):
         return self.__dict__.copy()
@@ -53,24 +55,42 @@ def build_company_card(session: Session, company: Company, today: date | None = 
 
 def process_company(session: Session, company: Company, edgar: Edgar, reader_a, reader_b=None, *, today: date | None = None,
                     since_days: int = 400, max_docs_per_filing: int = 8, model_a: str | None = None, model_b: str | None = None,
-                    build: bool = True, human_only: bool = False) -> CompanyRun:
+                    build: bool = True, human_only: bool = False, dry_run: bool = False, budget: dict | None = None) -> CompanyRun:
+    """dry_run: download and classify only (free); no Claude calls, nothing saved.
+    budget: shared {"docs_left": n}; once spent we stop before the next filing and leave it unrecorded so the next run continues."""
     today = today or date.today()
     run = CompanyRun(company.ticker)
     cik = company.cik or edgar.cik_for_ticker(company.ticker)
     if not cik:
         run.errors.append("no SEC CIK for this ticker: set it with company-set-cik")
         return run
-    company.cik = cik
+    if not dry_run:
+        company.cik = cik
     since = (company.last_filing_seen - timedelta(days=1)) if company.last_filing_seen else today - timedelta(days=since_days)
     refs = edgar.recent_filings(cik, since=since)
     known = {a for a in session.scalars(select(Filing.accession).where(Filing.company_id == company.id))}
     for ref in refs:
         if ref.accession in known:
             continue
+        if budget is not None and budget["docs_left"] <= 0 and not dry_run:
+            run.stopped_by_cap = True
+            break
         run.filings_new += 1
+        if dry_run:
+            try:
+                docs = fetch_filing_documents(edgar, cik, ref, max_docs_per_filing)
+                run.docs += len(docs)
+                run.preview.append(f"{ref.form} {ref.filed}: " + (", ".join(f"{d.name} [{d.kind}, {len(d.pages)} pages]" for d in docs) or "no readable documents"))
+            except Exception as exc:
+                run.filings_error += 1
+                run.errors.append(f"{ref.accession}: {type(exc).__name__}: {str(exc)[:200]}")
+            continue
         try:
             with session.begin_nested():   # a failure rolls back only this filing
                 docs = fetch_filing_documents(edgar, cik, ref, max_docs_per_filing)
+                if budget is not None:
+                    docs = docs[:max(budget["docs_left"], 0)]
+                    budget["docs_left"] -= len(docs)
                 n_facts = 0
                 for d in docs:
                     s = ingest.ingest_pages(session, company, d.pages, d.kind, f"{ref.form} {ref.filed} {d.name}", reader_a,
@@ -93,6 +113,8 @@ def process_company(session: Session, company: Company, edgar: Edgar, reader_a, 
                                status="error", error=f"{type(exc).__name__}: {str(exc)[:400]}"))
         if ref.filed and (company.last_filing_seen is None or ref.filed > company.last_filing_seen):
             company.last_filing_seen = ref.filed
+    if dry_run:
+        return run
     session.flush()
     extra = autoverify.reconsider(session, company)
     run.auto_verified += extra.auto_verified
@@ -107,7 +129,8 @@ def process_company(session: Session, company: Company, edgar: Edgar, reader_a, 
     return run
 
 
-def run_weekly(engine, edgar: Edgar, reader_a, reader_b=None, tickers: list[str] | None = None, **kw) -> dict:
+def run_weekly(engine, edgar: Edgar, reader_a, reader_b=None, tickers: list[str] | None = None, max_total_docs: int | None = None,
+               **kw) -> dict:
     """One session (transaction) per company so a failure in one cannot affect the others."""
     from .db import session_scope
     with session_scope(engine) as s:
@@ -118,6 +141,7 @@ def run_weekly(engine, edgar: Edgar, reader_a, reader_b=None, tickers: list[str]
         wanted = [t.upper() for t in tickers] if tickers else None
         cids = [c.id for c in s.scalars(select(Company).order_by(Company.ticker)) if not wanted or c.ticker in wanted]
     results = []
+    kw["budget"] = {"docs_left": max_total_docs} if max_total_docs is not None else None
     for cid in cids:
         try:
             with session_scope(engine) as s:
@@ -127,6 +151,8 @@ def run_weekly(engine, edgar: Edgar, reader_a, reader_b=None, tickers: list[str]
     summary = {"companies": len(results), "docs": sum(r.get("docs", 0) for r in results),
                "auto_verified": sum(r.get("auto_verified", 0) for r in results), "needs_review": sum(r.get("needs_review", 0) for r in results),
                "errors": sum(len(r.get("errors", [])) for r in results), "results": results}
+    if kw.get("dry_run"):
+        return summary
     with session_scope(engine) as s:
         job = s.get(JobRun, job_id)
         job.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)

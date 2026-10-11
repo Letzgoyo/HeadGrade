@@ -211,3 +211,28 @@ def test_universe_scan_keeps_mining_companies_and_resumes_from_cache(engine, tmp
         assert r2["scanned_now"] == 1 and r2["added"] == 0 and len(calls) == 3 and r2["mining_matched"] == 2
         cos = list(s.scalars(select(db.Company)))
         assert len(cos) == 2 and all(c.stage_auto and c.cik for c in cos)
+
+
+def test_dry_run_lists_documents_and_reads_nothing(engine):
+    with db.session_scope(engine) as s:
+        co = add_company(s)
+        a, b = Reader(facts()), Reader(facts())
+        run = weekly.process_company(s, co, fake_edgar(SUB), a, b, dry_run=True)
+        assert run.filings_new == 1 and run.docs == 1 and "exhibit991.htm" in run.preview[0]
+        assert (a.calls, b.calls) == (0, 0)
+        assert not list(s.scalars(select(db.Fact))) and not list(s.scalars(select(db.Filing))) and co.last_filing_seen is None
+
+
+def test_document_cap_stops_and_next_run_continues(engine):
+    with db.session_scope(engine) as s:
+        co = add_company(s)
+        sub = json.loads(json.dumps(SUB))
+        rec = sub["filings"]["recent"]
+        for k, v in (("accessionNumber", "0001429937-26-000050"), ("form", "6-K"), ("filingDate", "2026-09-10"), ("reportDate", "2026-06-30"),
+                     ("primaryDocument", "form6-k.htm"), ("primaryDocDescription", "6-K")):
+            rec[k].append(v)
+        edgar, a = fake_edgar(sub), Reader(facts())
+        r1 = weekly.process_company(s, co, edgar, a, None, build=False, budget={"docs_left": 1})
+        assert r1.docs == 1 and r1.stopped_by_cap and len(list(s.scalars(select(db.Filing)))) == 1
+        r2 = weekly.process_company(s, co, edgar, a, None, build=False, budget={"docs_left": 5})
+        assert r2.filings_new == 1 and r2.docs == 1 and not r2.stopped_by_cap

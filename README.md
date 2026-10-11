@@ -73,6 +73,22 @@ potential is judged separately at the asset level; the overall Investment Attrac
 survey marks as low-sample (5-9 responses) are flagged. For multi-mine companies the score is weighted by each project's stated
 share of production/NAV, and 20%+ exposure to a jurisdiction scoring under 40 raises a red flag. Credit Fraser on any public page.
 
+## Run on Replit (first live test: B2Gold)
+1. Create Repl > Import from GitHub > `Letzgoyo/HeadGrade`. In the Shell: `pip install -r requirements.txt`.
+2. Secrets: `ANTHROPIC_API_KEY`, and `SEC_USER_AGENT` = `Your Name your@email.com` (SEC requires it).
+3. Upload the Fraser PDF, then in the Shell:
+```
+python -m headgrade.cli init
+python -m headgrade.cli company-add-sec BTG --held
+python -m headgrade.cli deck-set au=<today's gold price>
+python -m headgrade.cli price-set BTG <US$ share price> USD
+python -m headgrade.cli jurisdictions-load-fraser <fraser.pdf>
+python -m headgrade.cli weekly --ticker BTG --since-days 250 --dry-run          # free: only lists what it would read
+python -m headgrade.cli weekly --ticker BTG --since-days 250 --max-total-docs 6 # small paid run (cap)
+python -m headgrade.cli queue --ticker BTG
+```
+4. Press **Run** to open the review app. Re-run the capped `weekly` command to continue where the cap stopped.
+
 ## Claude API key
 Only needed to read documents. Create a key at console.anthropic.com and store it as a secret named `ANTHROPIC_API_KEY`
 (on Replit: the Secrets tool, never in code or chat). Costs are per document read; see the cost notes in the project plan.
