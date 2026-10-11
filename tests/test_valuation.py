@@ -3,9 +3,9 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from minecards.decks import Deck
-from minecards.facts import F, FactBook
-from minecards.valuation import Market, Proj, interp, scale, value_developer, value_explorer, value_producer, value_royalty
+from headgrade.decks import Deck
+from headgrade.facts import F, FactBook
+from headgrade.valuation import Market, Proj, interp, scale, value_developer, value_explorer, value_producer, value_royalty
 
 DECK = Deck("test", {"au": 4000.0, "ag": 45.0}, date(2026, 10, 9))
 P1 = Proj(1, "Alpha", "au")
@@ -46,7 +46,7 @@ def test_developer_nav_is_repriced_and_p_nav_computed():
     assert m["implied_metal_multiple_at_1x_nav"] < 1.0
     assert m["implied_primary_price_at_1x_nav"] == pytest.approx(m["implied_metal_multiple_at_1x_nav"] * 4000)
     # consistency: re-pricing at the implied multiple really does bring NAV to the market cap
-    from minecards import npv as N
+    from headgrade import npv as N
     pj = r["tables"]["projects"][0]
     assert abs(sum(1 for _ in r["tables"]["sensitivity"])) == 5
     row100 = next(x for x in r["tables"]["sensitivity"] if x["price_vs_deck"] == 1.0)

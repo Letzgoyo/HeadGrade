@@ -10,13 +10,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 from sqlalchemy import select
 
-from minecards import config, db, pipeline, review
-from minecards.db import Benchmark, Company, Fact, JurisdictionScore, PriceDeck, Project
-from minecards.registry import METALS, METAL_UNIT, STAGES
-from minecards.render import render_html
-from minecards.valuation import Market
+from headgrade import config, db, pipeline, review
+from headgrade.db import Benchmark, Company, Fact, JurisdictionScore, PriceDeck, Project
+from headgrade.registry import METALS, METAL_UNIT, STAGES
+from headgrade.render import render_html
+from headgrade.valuation import Market
 
-st.set_page_config(page_title="MineCards review", page_icon="⛏️", layout="wide")
+st.set_page_config(page_title="HeadGrade review", page_icon="⛏️", layout="wide")
 engine = db.make_engine()
 db.init_db(engine)
 
@@ -149,7 +149,7 @@ def page_companies():
         up = st.file_uploader("PDF", type=["pdf"])
         if up and st.button("Extract facts", disabled=not os.getenv("ANTHROPIC_API_KEY"), type="primary"):
             import anthropic
-            from minecards.ingest import ingest_pdf
+            from headgrade.ingest import ingest_pdf
             config.DATA_DIR.mkdir(parents=True, exist_ok=True)
             (config.DATA_DIR / "docs").mkdir(exist_ok=True)
             path = config.DATA_DIR / "docs" / up.name
@@ -193,7 +193,7 @@ def page_decks():
         st.subheader("Peer benchmarks (needed to rate explorers and royalty companies)")
         st.table([{"kind": b.kind, "metal": b.metal, "stage": b.stage, "p25": b.p25, "median": b.median, "p75": b.p75, "n": b.n, "as_of": b.as_of, "source": b.source}
                   for b in s.scalars(select(Benchmark))])
-        st.caption("Add benchmarks with: python -m minecards.cli benchmark-add --kind peer_ev_per_unit --metal au --stage explorer --p25 .. --median .. --p75 .. --n .. --source ..")
+        st.caption("Add benchmarks with: python -m headgrade.cli benchmark-add --kind peer_ev_per_unit --metal au --stage explorer --p25 .. --median .. --p75 .. --n .. --source ..")
 
 
 {"Review queue": page_review, "Card preview": page_card, "Companies & documents": page_companies, "Decks & benchmarks": page_decks}[page]()

@@ -4,8 +4,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from minecards import db, extract, ingest, units
-from minecards.extract import ExtractedFact, ExtractionResult, normalise_text, numbers_in, select_pages, verify_fact
+from headgrade import db, extract, ingest, units
+from headgrade.extract import ExtractedFact, ExtractionResult, normalise_text, numbers_in, select_pages, verify_fact
 
 PAGES = [
     "EXAMPLE GOLD CORP. Technical Report\nSummary of the Alpha Project",

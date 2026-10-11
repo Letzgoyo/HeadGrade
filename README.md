@@ -1,4 +1,4 @@
-# MineCards (working title)
+# HeadGrade
 
 Weekly, source-backed valuation cards for mining companies. Each company gets a **quality grade** (team, asset,
 jurisdiction, financial strength, growth) and a **separate valuation grade**, with every input traceable to a page of a
@@ -7,7 +7,7 @@ cards are rebuilt weekly.
 
 ## How it works
 1. **Documents in.** A PDF (technical report, financial statements, MD&A, presentation) is read by Claude into a fixed
-   vocabulary of facts (`minecards/registry.py`). Each fact carries a **verbatim quote and page**.
+   vocabulary of facts (`headgrade/registry.py`). Each fact carries a **verbatim quote and page**.
 2. **Checked in code, not by the model.** We confirm the quote really appears on that page and that the number is in the
    quote. Anything we cannot find is **rejected automatically**. Everything else waits as *unverified*.
 3. **You verify.** `review_app.py` shows each number beside its quote and the page text: Verify, Reject, or correct it.
@@ -26,13 +26,28 @@ cards are rebuilt weekly.
 ```
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY=...           # only needed to read documents
-python -m minecards.cli init
-python -m minecards.cli deck-set au=... ag=... cu=...        # you set the metal prices; there are no built-in ones
-python -m minecards.cli company-add --name "..." --ticker XXX.TO --stage developer --metals au,ag --jurisdiction Nevada --held
+python -m headgrade.cli init
+python -m headgrade.cli deck-set au=... ag=... cu=...        # you set the metal prices; there are no built-in ones
+python -m headgrade.cli company-add --name "..." --ticker XXX.TO --stage developer --metals au,ag --jurisdiction Nevada --held
 streamlit run review_app.py            # add documents, review facts, preview cards
 pytest                                 # 42 tests, all on FICTIONAL data (examples/demo_data.py)
 python examples/make_demo_card.py card.html
 ```
+
+## Jurisdiction scores (Fraser Institute)
+`python -m headgrade.cli jurisdictions-load-fraser <Fraser Annual Survey of Mining Companies PDF>` loads all 68 jurisdictions
+(tested exactly against the 2025 edition). The **policy score (PPI, 0-100)** drives the jurisdiction grade, because mineral
+potential is judged separately at the asset level; the overall Investment Attractiveness Index is stored alongside. Rows the
+survey marks as low-sample (5-9 responses) are flagged. For multi-mine companies the score is weighted by each project's stated
+share of production/NAV, and 20%+ exposure to a jurisdiction scoring under 40 raises a red flag. Credit Fraser on any public page.
+
+## Claude API key
+Only needed to read documents. Create a key at console.anthropic.com and store it as a secret named `ANTHROPIC_API_KEY`
+(on Replit: the Secrets tool, never in code or chat). Costs are per document read; see the cost notes in the project plan.
+
+## Next (automation)
+Company universe from public lists, filing fetchers (SEC EDGAR first, ASX next), a second independent reading plus arithmetic
+and cross-document checks so only conflicts need a person, a weekly scheduler, and a licensed price/metal feed.
 
 ## Honest limits
 - **Never run against a real document or the live Claude API yet.** Built and tested with fictional data and a fake client.

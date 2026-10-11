@@ -4,9 +4,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from examples.demo_data import build
-from minecards import db, pipeline
-from minecards.render import render_html
-from minecards.valuation import Market
+from headgrade import db, pipeline
+from headgrade.render import render_html
+from headgrade.valuation import Market
 
 out = sys.argv[1] if len(sys.argv) > 1 else "demo_card.html"
 engine = db.make_engine("sqlite:///:memory:")

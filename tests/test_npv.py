@@ -1,7 +1,7 @@
 import pytest
 
-from minecards import decks, equiv, npv
-from minecards.npv import ProjectInputs
+from headgrade import decks, equiv, npv
+from headgrade.npv import ProjectInputs
 
 
 def simple():

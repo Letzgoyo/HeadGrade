@@ -8,7 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from examples.demo_data import build
-from minecards import db, review
+from headgrade import db, review
 from sqlalchemy import select
 
 
@@ -57,11 +57,11 @@ def test_page_text_returns_the_cited_page(world):
 
 
 def test_review_app_pages_render_and_verify_button_works(tmp_path, monkeypatch):
-    monkeypatch.setenv("MINECARDS_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("HEADGRADE_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 't.db'}")
-    for m in [k for k in sys.modules if k.startswith("minecards")]:
+    for m in [k for k in sys.modules if k.startswith("headgrade")]:
         del sys.modules[m]
-    from minecards import db as db2
+    from headgrade import db as db2
     from streamlit.testing.v1 import AppTest
     eng = db2.make_engine()
     db2.init_db(eng)

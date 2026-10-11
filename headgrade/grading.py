@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import date
 
 from .facts import FactBook
+from .jurisdictions import resolve_key
 from .valuation import scale
 
 WEIGHTS = {"team": 20, "asset": 30, "jurisdiction": 15, "financial": 20, "growth": 15}
@@ -72,18 +73,39 @@ def _asset(fb: FactBook, stage: str, val: dict, projects, notes: list[str]) -> f
     return _avg(parts)
 
 
-def _jurisdiction(fb: FactBook, projects, table: dict[str, float], notes: list[str]) -> float | None:
-    js, ps = [], []
+def project_jurisdictions(fb: FactBook, projects, table: dict[str, float]) -> list[dict]:
+    """Per project: its jurisdiction, that jurisdiction's policy score, and its stated weight in the company (if any)."""
+    out = []
     for p in projects:
-        name = fb.text("jurisdiction", project_id=p.id, label=f"{p.name}: jurisdiction") or None
-        if name and name.lower() in table:
-            js.append(table[name.lower()]); notes.append(f"{p.name}: {name} scores {table[name.lower()]:.0f}/100 on the jurisdiction index")
-        elif name:
-            notes.append(f"{p.name}: '{name}' is not in the jurisdiction table")
-        ps_ = fb.text("permit_stage", project_id=p.id, label=f"{p.name}: permit stage")
-        if ps_ in PERMIT_POINTS:
-            ps.append(PERMIT_POINTS[ps_]); notes.append(f"{p.name}: permitting is '{ps_}'")
-    j, pm = _avg(js), _avg(ps)
+        name = fb.text("jurisdiction", project_id=p.id, label=f"{p.name}: jurisdiction", record=True) or None
+        w = fb.num("project_weight_pct", project_id=p.id, label=f"{p.name}: share of production/NAV")
+        score = table.get(resolve_key(name)) if name else None
+        out.append({"project": p.name, "jurisdiction": name, "score": score, "weight": w,
+                    "permit": fb.text("permit_stage", project_id=p.id, label=f"{p.name}: permit stage")})
+    return out
+
+
+def _jurisdiction(fb: FactBook, projects, table: dict[str, float], notes: list[str]) -> float | None:
+    rows = project_jurisdictions(fb, projects, table)
+    scored = [r for r in rows if r["score"] is not None]
+    for r in rows:
+        if r["jurisdiction"] and r["score"] is None:
+            notes.append(f"{r['project']}: '{r['jurisdiction']}' is not in the jurisdiction table")
+        if r["permit"] in PERMIT_POINTS:
+            notes.append(f"{r['project']}: permitting is '{r['permit']}'")
+    j = None
+    if scored:
+        if all(r["weight"] for r in scored):
+            tot = sum(r["weight"] for r in scored)
+            j = sum(r["score"] * r["weight"] for r in scored) / tot
+            notes.append("weighted by each project's share of production/NAV: " + "; ".join(
+                f"{r['project']} ({r['jurisdiction']}) {r['weight']:g}% at {r['score']:.0f}/100" for r in scored))
+        else:
+            j = sum(r["score"] for r in scored) / len(scored)
+            notes.append("projects weighted equally (production shares not found): " + "; ".join(
+                f"{r['project']} ({r['jurisdiction']}) {r['score']:.0f}/100" for r in scored))
+    ps = [PERMIT_POINTS[r["permit"]] for r in rows if r["permit"] in PERMIT_POINTS]
+    pm = _avg(ps)
     if j is None and pm is None:
         return None
     if j is None:
@@ -113,7 +135,7 @@ def _financial(stage: str, val: dict, notes: list[str]) -> float | None:
     return _avg(parts)
 
 
-def _red_flags(fb: FactBook, stage: str, val: dict, today: date) -> list[dict]:
+def _red_flags(fb: FactBook, stage: str, val: dict, today: date, projects=(), table: dict | None = None) -> list[dict]:
     m, out = val.get("metrics", {}), []
     add = lambda sev, text: out.append({"severity": sev, "text": text})
     if m.get("dilution_if_all_equity_pct") and m["dilution_if_all_equity_pct"] > 50:
@@ -132,6 +154,9 @@ def _red_flags(fb: FactBook, stage: str, val: dict, today: date) -> list[dict]:
                 add("medium", f"The economic study is {((today - d).days / 365):.0f} years old; its costs may be stale.")
         except ValueError:
             pass
+    for r in project_jurisdictions(FactBook(fb.facts), projects, table or {}):
+        if r["score"] is not None and r["score"] < 40 and (r["weight"] or 0) >= 20:
+            add("high", f"{r['weight']:g}% of production/NAV is in {r['jurisdiction']}, which scores {r['score']:.0f}/100 on mining policy (Fraser Institute).")
     for row in val.get("tables", {}).get("projects", []):
         if isinstance(row.get("study_prices"), dict) and isinstance(row.get("deck_prices"), dict):
             ratio = max(row["deck_prices"][k] / row["study_prices"][k] for k in row["study_prices"] if row["study_prices"][k])
@@ -143,7 +168,7 @@ def _red_flags(fb: FactBook, stage: str, val: dict, today: date) -> list[dict]:
 def grade(fb: FactBook, stage: str, projects, valuation: dict, jurisdiction_table: dict[str, float] | None = None,
           today: date | None = None) -> dict:
     today = today or date.today()
-    table = {k.lower(): v for k, v in (jurisdiction_table or {}).items()}
+    table = {resolve_key(k): v for k, v in (jurisdiction_table or {}).items()}
     cats: dict[str, dict] = {}
     scorers = {
         "team": lambda n: _team(fb, n),
@@ -178,7 +203,7 @@ def grade(fb: FactBook, stage: str, projects, valuation: dict, jurisdiction_tabl
              "medium" if coverage >= 0.6 and conf["verified_share"] >= 0.5 else "low")
     return {
         "quality_score": quality, "quality_grade": letter(quality), "value_score": value, "value_grade": letter(value),
-        "quadrant": quadrant, "categories": cats, "red_flags": _red_flags(fb, stage, valuation, today),
+        "quadrant": quadrant, "categories": cats, "red_flags": _red_flags(fb, stage, valuation, today, projects, table),
         "confidence": {"level": level, "category_coverage": round(coverage, 2), **conf},
         "missing": sorted(set(fb.missing)),
     }

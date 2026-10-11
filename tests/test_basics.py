@@ -1,6 +1,6 @@
-from minecards import units
-from minecards.facts import F, FactBook
-from minecards.registry import REGISTRY, METAL_UNIT
+from headgrade import units
+from headgrade.facts import F, FactBook
+from headgrade.registry import REGISTRY, METAL_UNIT
 
 
 def test_unit_normalisation():

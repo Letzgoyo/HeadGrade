@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from minecards import db
-from minecards.db import Company, Document, Fact, JurisdictionScore, PriceDeck, Project
+from headgrade import db
+from headgrade.db import Company, Document, Fact, JurisdictionScore, PriceDeck, Project
 
 DECK = {"au": 4000.0, "ag": 48.0}
 

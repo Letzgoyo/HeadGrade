@@ -14,11 +14,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import select
 
-from minecards import db, ingest, pipeline
-from minecards.db import Company, PriceDeck
-from minecards.extract import ExtractedFact as EF, ExtractionResult
-from minecards.render import render_html
-from minecards.valuation import Market
+from headgrade import db, ingest, pipeline
+from headgrade.db import Company, PriceDeck
+from headgrade.extract import ExtractedFact as EF, ExtractionResult
+from headgrade.render import render_html
+from headgrade.valuation import Market
 
 
 def fake_client(facts):

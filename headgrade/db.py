@@ -7,6 +7,7 @@ from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text,
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
 from . import config
+from .jurisdictions import resolve_key as _jkey
 
 
 class Base(DeclarativeBase):
@@ -108,10 +109,19 @@ class Benchmark(Base):
 
 
 class JurisdictionScore(Base):
+    """One row per jurisdiction. `score` (0-100, higher is better) is the policy score used for grading."""
     __tablename__ = "jurisdiction_scores"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(120), unique=True)
-    score: Mapped[float] = mapped_column(Float)  # 0-100, higher is better
+    name: Mapped[str] = mapped_column(String(120))
+    key: Mapped[str] = mapped_column(String(120), unique=True, default=lambda ctx: _jkey(ctx.get_current_parameters()["name"]))
+    score: Mapped[float] = mapped_column(Float)
+    iai: Mapped[float | None] = mapped_column(Float)          # overall investment attractiveness (policy + mineral potential)
+    ppi_rank: Mapped[int | None] = mapped_column(Integer)
+    iai_rank: Mapped[int | None] = mapped_column(Integer)
+    rank_of: Mapped[int | None] = mapped_column(Integer)
+    low_sample: Mapped[bool] = mapped_column(default=False)    # Fraser marks rows with only 5-9 responses
+    edition: Mapped[str | None] = mapped_column(String(10))
+    page: Mapped[int | None] = mapped_column(Integer)
     source: Mapped[str] = mapped_column(Text)
 
 

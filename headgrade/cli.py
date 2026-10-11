@@ -1,4 +1,4 @@
-"""Command line for the pipeline. Run as:  python -m minecards.cli <command> ..."""
+"""Command line for the pipeline. Run as:  python -m headgrade.cli <command> ..."""
 from __future__ import annotations
 
 import argparse
@@ -30,7 +30,7 @@ def _kv(items):
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="minecards")
+    ap = argparse.ArgumentParser(prog="headgrade")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
     c = sub.add_parser("company-add")
@@ -40,6 +40,10 @@ def main(argv=None) -> int:
     c.add_argument("--held", action="store_true", help="the site owner holds this stock (disclosed on the card)")
     c.add_argument("--sponsored", action="store_true", help="company sponsors the site (disclosed on the card)")
     sub.add_parser("company-list")
+    fr = sub.add_parser("jurisdictions-load-fraser", help="load the Fraser Institute survey tables from its PDF")
+    fr.add_argument("pdf"); fr.add_argument("--edition", default="2025")
+    fr.add_argument("--first-page", type=int, default=15); fr.add_argument("--last-page", type=int, default=28)
+    sub.add_parser("jurisdictions-list")
     d = sub.add_parser("deck-set"); d.add_argument("--name", default="spot"); d.add_argument("--as-of", default=str(date.today()))
     d.add_argument("prices", nargs="+", help="au=4600 ag=52 cu=5.2 ...")
     j = sub.add_parser("jurisdiction-set"); j.add_argument("name"); j.add_argument("score", type=float); j.add_argument("--source", default="manual")
@@ -71,6 +75,13 @@ def main(argv=None) -> int:
         elif a.cmd == "company-list":
             for x in s.scalars(select(Company)):
                 print(f"{x.ticker:10} {x.stage:9} {x.name}  [{x.primary_metals}]" + ("  HELD" if x.held_by_owner else "") + ("  SPONSOR" if x.sponsored else ""))
+        elif a.cmd == "jurisdictions-load-fraser":
+            from . import fraser
+            res = fraser.load(s, fraser.parse_pdf(a.pdf, a.first_page, a.last_page), a.edition)
+            print(res)
+        elif a.cmd == "jurisdictions-list":
+            for r in s.scalars(select(JurisdictionScore).order_by(JurisdictionScore.score.desc())):
+                print(f"{r.score:6.2f}  IAI {r.iai if r.iai is not None else '-':>6}  {r.name}" + ("  (low sample)" if r.low_sample else ""))
         elif a.cmd == "deck-set":
             prices = _kv(a.prices)
             bad = [m for m in prices if m not in METALS]

@@ -8,9 +8,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from examples.demo_data import build
-from minecards import db, pipeline
-from minecards.render import render_html
-from minecards.valuation import Market
+from headgrade import db, pipeline
+from headgrade.render import render_html
+from headgrade.valuation import Market
 from sqlalchemy import select
 
 
@@ -68,7 +68,7 @@ def test_weekly_diff_reports_material_changes(world):
     pipeline.save_snapshot(world, co, old)
     assert pipeline.diff_cards(None, old) == ["First card for this company."]
     # share price doubles and the deck falls
-    from minecards.decks import Deck
+    from headgrade.decks import Deck
     new = pipeline.build_card(world, co, Deck("spot", {"au": 2600.0, "ag": 30.0}, date(2026, 10, 16)), market(5.0), publish=True)
     changes = pipeline.diff_cards(pipeline.last_snapshot(world, co), new)
     assert any("metal price deck" in c for c in changes) and any("Share price moved" in c for c in changes)

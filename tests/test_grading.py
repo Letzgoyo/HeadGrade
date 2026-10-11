@@ -2,10 +2,10 @@ from datetime import date
 
 import pytest
 
-from minecards import grading
-from minecards.decks import Deck
-from minecards.facts import F, FactBook
-from minecards.valuation import Market, Proj, value_developer, value_explorer
+from headgrade import grading
+from headgrade.decks import Deck
+from headgrade.facts import F, FactBook
+from headgrade.valuation import Market, Proj, value_developer, value_explorer
 from test_valuation import DECK, P1, developer_facts, explorer_facts, f
 
 

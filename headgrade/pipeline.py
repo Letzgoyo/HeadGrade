@@ -30,7 +30,7 @@ def latest_deck(session: Session, name: str | None = None) -> Deck | None:
 
 
 def jurisdiction_table(session: Session) -> dict[str, float]:
-    return {r.name: r.score for r in session.scalars(select(JurisdictionScore))}
+    return {r.key: r.score for r in session.scalars(select(JurisdictionScore))}
 
 
 def build_card(session: Session, company: Company, deck: Deck, market: V.Market, publish: bool = False,

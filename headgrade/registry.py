@@ -67,6 +67,7 @@ REGISTRY: dict[str, FactSpec] = dict([
     _s("annual_production", "metal_qty", "project", "Average annual payable metal production over the mine life", needs_metal=True),
     _s("royalty_burden_pct", "pct", "project", "Royalties/streams as a percentage of revenue, if stated"),
     _s("ownership_pct", "pct", "project", "Company's attributable interest in the project"),
+    _s("project_weight_pct", "pct", "project", "Share of the company's production, revenue or NAV that comes from this project, as stated"),
     _s("resource_contained", "metal_qty", "project", "Contained metal in mineral resources", needs_metal=True, needs_category=True),
     _s("reserve_contained", "metal_qty", "project", "Contained metal in mineral reserves", needs_metal=True, needs_category=True),
     _s("resource_grade", "grade", "project", "Average grade of mineral resources", needs_metal=True, needs_category=True),
