@@ -105,7 +105,7 @@ def to_row(ef: ExtractedFact, company: Company, project: Project | None, doc: Do
         conf = min(conf, 0.5)
     row = Fact(company_id=company.id, project_id=project.id if project else None, key=ef.key, metal=ef.metal, category=ef.category,
                value_num=value_num, value_text=text, unit=unit, currency=ccy, as_of=as_of or doc.effective_date, doc_id=doc.id,
-               page=page, quote=ef.quote[:600], as_written=(f"{ef.value:g} {ef.unit or ''}".strip() if ef.value is not None else None),
+               page=page, quote=ef.quote[:600], as_written=(f"{ef.value:,.12g} {ef.unit or ''}".strip() if ef.value is not None else None),
                confidence=conf, status=status, auto_check=auto_check, note="; ".join(notes) or None)
     return row, notes
 

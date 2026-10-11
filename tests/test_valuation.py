@@ -171,3 +171,16 @@ def test_pro_forma_p_nav_is_hand_checkable_and_drives_the_score():
     # a fully funded company is scored on plain P/NAV
     rich = value_developer(developer_facts(cash=2e9), Market(2.50, "USD"), [P1], DECK)
     assert rich["metrics"]["funding_gap_usd"] == 0 and rich["metrics"]["p_nav_used_for_score"] == pytest.approx(rich["metrics"]["p_nav"])
+
+
+def test_producer_with_partial_data_still_reports_what_it_can_and_does_not_invent_a_score():
+    fb = FactBook([f("shares_basic", 100e6), f("cash", 50e6, currency="USD"), f("debt", 100e6, currency="USD"),
+                   f("op_cash_flow_ttm", 200e6, currency="USD"), f("revenue_ttm", 800e6, currency="USD"),
+                   f("aisc_per_unit", 2000, metal="au")])
+    r = value_producer(fb, Market(20.0), [], DECK)       # market cap $2.0B
+    m = r["metrics"]
+    assert r["value_score"] is None and any("not enough producer data" in x for x in r["flags"])
+    assert m["fcf_ttm_usd"] is None and m["ev_to_ebitda"] is None
+    assert m["price_to_operating_cash_flow"] == pytest.approx(2.0e9 / 200e6)
+    assert m["ev_to_revenue"] == pytest.approx((2.0e9 + 100e6 - 50e6) / 800e6)
+    assert m["aisc_margin_at_deck"] == pytest.approx((4000 - 2000) / 4000)

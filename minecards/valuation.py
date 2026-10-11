@@ -324,6 +324,9 @@ def value_producer(fb: FactBook, mk: Market, projects: list[Proj], deck: Deck, p
         "net_debt_to_ebitda": (debt - cash) / ebitda if ebitda and ebitda > 0 else None,
         "aisc_margin_at_deck": margin, "reserve_life_years": fb.num("reserve_life_years", label="Reserve life"),
         "revenue_ttm_usd": rev, "primary_metal": primary,
+        "price_to_operating_cash_flow": mcap / ocf if ocf and ocf > 0 else None,
+        "ev_to_revenue": ev / rev if rev and rev > 0 else None,
+        "operating_cash_flow_usd": ocf,
     }
     parts = []
     y = metrics["fcf_yield_normalised"] if metrics["fcf_yield_normalised"] is not None else metrics["fcf_yield_reported"]

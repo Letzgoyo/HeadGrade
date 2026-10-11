@@ -141,3 +141,13 @@ def test_real_pdf_roundtrip(tmp_path):
     pages = extract.load_pdf_pages(str(path))
     assert len(pages) == 3
     assert "Mineral Resource Estimate" in pages[1].replace("\n", " ")
+
+
+def test_as_written_keeps_readable_numbers(session):
+    s, c = session
+    client = FakeClient([ef(key="shares_basic", value=1332417631.0, unit=None, quote="x" * 3 + " 1,332,417,631 shares", page=1),
+                         ef(key="revenue_ttm", value=3061238.0, unit="US$ thousands", quote="Gold revenue 3,061,238", page=1)])
+    ingest.ingest_pages(s, c, ["x" * 3 + " 1,332,417,631 shares and Gold revenue 3,061,238"], "financials", "t", client)
+    from sqlalchemy import select
+    written = {r.key: r.as_written for r in s.scalars(select(db.Fact))}
+    assert written["shares_basic"] == "1,332,417,631" and written["revenue_ttm"] == "3,061,238 US$ thousands"
