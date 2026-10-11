@@ -1,0 +1,45 @@
+# MineCards (working title)
+
+Weekly, source-backed valuation cards for mining companies. Each company gets a **quality grade** (team, asset,
+jurisdiction, financial strength, growth) and a **separate valuation grade**, with every input traceable to a page of a
+company document. Not a live lookup tool: documents are read once, a person verifies the numbers that matter, and
+cards are rebuilt weekly.
+
+## How it works
+1. **Documents in.** A PDF (technical report, financial statements, MD&A, presentation) is read by Claude into a fixed
+   vocabulary of facts (`minecards/registry.py`). Each fact carries a **verbatim quote and page**.
+2. **Checked in code, not by the model.** We confirm the quote really appears on that page and that the number is in the
+   quote. Anything we cannot find is **rejected automatically**. Everything else waits as *unverified*.
+3. **You verify.** `review_app.py` shows each number beside its quote and the page text: Verify, Reject, or correct it.
+   Published cards use **only verified facts**; drafts also use unverified ones and say so.
+4. **Valuation by stage** (`valuation.py`, assumptions in `assumptions.py`):
+   - *Developer:* NAV from the company's own study, re-priced at your metal deck. The model is calibrated so it reproduces the
+     published after-tax NPV at the study's own prices, then flexed (price, discount rate). Shows P/NAV, **pro-forma P/NAV after
+     funding the capex with new shares**, the metal price the market is implying, funding gap and dilution, sensitivity table.
+   - *Explorer:* EV per equivalent resource unit against peer benchmarks (**not rated until benchmarks are loaded**).
+   - *Producer:* normalised free cash flow yield, EV/EBITDA, stress test at -20% metals, AISC margin, net debt/EBITDA.
+   - *Royalty:* price/cash flow vs peers (**not rated until benchmarks are loaded**).
+5. **Grades** (`grading.py`) with confidence, red flags, and a list of what could not be found. Weekly snapshots and a
+   plain-English "what changed" diff (`pipeline.py`).
+
+## Run it
+```
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=...           # only needed to read documents
+python -m minecards.cli init
+python -m minecards.cli deck-set au=... ag=... cu=...        # you set the metal prices; there are no built-in ones
+python -m minecards.cli company-add --name "..." --ticker XXX.TO --stage developer --metals au,ag --jurisdiction Nevada --held
+streamlit run review_app.py            # add documents, review facts, preview cards
+pytest                                 # 42 tests, all on FICTIONAL data (examples/demo_data.py)
+python examples/make_demo_card.py card.html
+```
+
+## Honest limits
+- **Never run against a real document or the live Claude API yet.** Built and tested with fictional data and a fake client.
+- The **price-to-NAV ranges by study stage and the producer anchors are rule-of-thumb placeholders** (`assumptions.py`),
+  printed on every card. Replace them with measured peer data.
+- Explorers and royalty companies cannot be valued until peer benchmarks exist in the database.
+- Growth is not scored yet. Team scoring uses only facts the documents state.
+- Table extraction from PDFs can misalign columns; that is why a person verifies the critical inputs.
+- Prices, FX and metal decks are entered by hand for now. A licensed price feed is needed before charging anyone.
+- Not financial advice. Get legal advice before publishing grades on specific securities.
