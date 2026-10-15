@@ -76,3 +76,13 @@ def test_map_and_headers(client):
     assert "class='map'" in home.get_data(as_text=True) and home.headers["X-Content-Type-Options"] == "nosniff"
     assert client.get("/brand/headgrade-icon.svg").status_code == 200
     assert client.get("/brand/../README.md").status_code == 404
+
+
+def test_demo_mode_builds_fictional_site_and_labels_it(tmp_path, monkeypatch):
+    from headgrade import config, demo
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    c = site.create_app(demo.demo_engine(), demo=True).test_client()
+    home = c.get("/").get_data(as_text=True)
+    assert "Demo mode" in home and "noindex" in home and "FICTIONAL" in c.get("/companies").get_data(as_text=True)
+    assert config.DATA_DIR == tmp_path
+    assert c.get("/company/EXM").status_code == 200

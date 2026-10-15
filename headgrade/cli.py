@@ -35,6 +35,7 @@ def main(argv=None) -> int:
     sub.add_parser("init")
     sv = sub.add_parser("serve", help="run the public website (read-only; shows published cards only)")
     sv.add_argument("--port", type=int, default=8080); sv.add_argument("--host", default="0.0.0.0")
+    sv.add_argument("--demo", action="store_true", help="serve fictional demo companies (no API key, no cost)")
     c = sub.add_parser("company-add")
     c.add_argument("--name", required=True); c.add_argument("--ticker", required=True)
     c.add_argument("--stage", choices=STAGES, required=True); c.add_argument("--metals", default="au")
@@ -130,7 +131,11 @@ def main(argv=None) -> int:
             print(universe.scan_sec(Edgar(), s, tuple(a.sic) if a.sic else universe.MINING_SIC, a.limit))
         elif a.cmd == "serve":
             from .site import create_app
-            create_app(engine).run(host=a.host, port=a.port)
+            if a.demo:
+                from .demo import demo_engine
+                create_app(demo_engine(), demo=True).run(host=a.host, port=a.port)
+            else:
+                create_app(engine).run(host=a.host, port=a.port)
         elif a.cmd == "weekly":
             import anthropic
             from . import config, weekly

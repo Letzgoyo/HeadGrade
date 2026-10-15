@@ -91,6 +91,11 @@ Preview with fictional data: `python examples/seed_site_demo.py demo_out` then `
 **Admin screen:** `ADMIN_PASSWORD=... streamlit run review_app.py --server.port 8501` in the workspace shell. Do not publish it in the deployment, and always set
 `ADMIN_PASSWORD`. Public deployments need a real database (`DATABASE_URL`, Postgres) rather than a local file, because Replit deployments do not keep files.
 
+## Try the whole site for free (demo mode)
+No API key, no network, no cost: set a Replit Secret `HEADGRADE_DEMO` = `1` and press Run (or `python -m headgrade.cli serve --demo`). It builds a throwaway
+database of fictional companies (clearly labelled on every page and hidden from search engines) so you can check the site, the cards, the scorecard and the
+filters. Remove the secret to switch back to the real database.
+
 ## Going live on Replit (checklist)
 1. Import the repo; Shell: `pip install -r requirements.txt`.
 2. Secrets: `ANTHROPIC_API_KEY`, `SEC_USER_AGENT` ("Name email"), `DATABASE_URL` (a Postgres URL, same value in the workspace and the deployment), `ADMIN_PASSWORD`,

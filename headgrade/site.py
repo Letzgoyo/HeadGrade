@@ -69,7 +69,7 @@ def quality_value_map(rows: list[dict]) -> str:
     return "".join(o)
 
 
-def create_app(engine=None) -> Flask:
+def create_app(engine=None, demo: bool = False) -> Flask:
     app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
     eng = engine or db.make_engine()
     db.init_db(eng)
@@ -79,7 +79,7 @@ def create_app(engine=None) -> Flask:
     @app.context_processor
     def _ctx():
         return {"brand": brand, "card_css": render.CSS, "tagline": TAGLINE, "metal_names": METAL_NAMES, "stage_names": STAGE_NAMES,
-                "legal_draft": legal_draft, "year": date.today().year,
+                "legal_draft": legal_draft, "demo": demo, "year": date.today().year,
                 "base": site_url or request.url_root.rstrip("/")}
 
     @app.after_request

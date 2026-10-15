@@ -7,9 +7,10 @@
 <link rel="icon" href="{{ url_for('brand_file', name='headgrade-app-icon.svg') }}" type="image/svg+xml">
 <meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ desc|default('Source-backed grades for mining companies.') }}">
 <meta property="og:type" content="website"><meta property="og:image" content="{{ base }}/brand/png/headgrade-x-profile-800.png"><meta name="twitter:card" content="summary">
-<meta name="theme-color" content="#0e6b7a">
+<meta name="theme-color" content="#0e6b7a">{% if demo %}<meta name="robots" content="noindex,nofollow">{% endif %}
 <style>{{ card_css|safe }}</style><link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
 </head><body>
+{% if demo %}<div class="demobar"><b>Demo mode.</b> Every company here is fictional and the numbers are made up, to show how the site works. Not real ratings.</div>{% endif %}
 <header class="nav"><div class="wrap"><div class="brand">{{ logo() }}</div>
 <nav aria-label="Main"><ul>
 {% for ep, label in [('companies','Companies'),('methodology','Methodology'),('about','About'),('disclosures','Disclosures')] %}

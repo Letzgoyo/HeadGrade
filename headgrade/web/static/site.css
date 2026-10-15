@@ -45,3 +45,4 @@ svg.map .pt{fill:var(--acc);stroke:var(--bg);stroke-width:2}svg.map .hit{fill:tr
 footer.site{border-top:1px solid var(--line);margin-top:30px;padding:28px 0 40px;color:var(--mut);font-size:13px;background:var(--card)}
 footer.site .cols{display:flex;gap:30px;flex-wrap:wrap;justify-content:space-between}footer.site ul{list-style:none;margin:0;padding:0}footer.site li{margin:4px 0}footer.site .brand{border:0;margin:0;padding:0}footer.site .brand .bt{display:none}
 footer.site p{max-width:46em;margin:8px 0}
+.demobar{background:#fff4d6;color:#7a5600;border-bottom:1px solid #f0d58c;padding:8px 16px;text-align:center;font-size:13.5px}
