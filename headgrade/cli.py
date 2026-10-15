@@ -33,6 +33,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="headgrade")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
+    bi = sub.add_parser("bundle-import", help="import facts read outside the weekly job (see headgrade/bundle.py)")
+    bi.add_argument("file"); bi.add_argument("--no-build", action="store_true", help="do not build the card afterwards")
     sv = sub.add_parser("serve", help="run the public website (read-only; shows published cards only)")
     sv.add_argument("--port", type=int, default=8080); sv.add_argument("--host", default="0.0.0.0")
     sv.add_argument("--demo", action="store_true", help="serve fictional demo companies (no API key, no cost)")
@@ -129,6 +131,10 @@ def main(argv=None) -> int:
             from . import universe
             from .edgar import Edgar
             print(universe.scan_sec(Edgar(), s, tuple(a.sic) if a.sic else universe.MINING_SIC, a.limit))
+        elif a.cmd == "bundle-import":
+            from . import bundle
+            res = bundle.import_bundle(s, json.load(open(a.file)), build=not a.no_build)
+            print(json.dumps(res, indent=1))
         elif a.cmd == "serve":
             from .site import create_app
             if a.demo:

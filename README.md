@@ -91,6 +91,11 @@ Preview with fictional data: `python examples/seed_site_demo.py demo_out` then `
 **Admin screen:** `ADMIN_PASSWORD=... streamlit run review_app.py --server.port 8501` in the workspace shell. Do not publish it in the deployment, and always set
 `ADMIN_PASSWORD`. Public deployments need a real database (`DATABASE_URL`, Postgres) rather than a local file, because Replit deployments do not keep files.
 
+## Real data with no API key (bundles)
+Facts can be read in a Claude chat session (included in a subscription) and imported: `python -m headgrade.cli bundle-import bundle.json`. A bundle holds the
+company, the document pages the facts cite, one or two independent readings, and optionally a price and metal deck. Every quote is re-checked in code
+against the pages, auto-verification runs, and the published card still uses verified facts only. See `headgrade/bundle.py`.
+
 ## Try the whole site for free (demo mode)
 No API key, no network, no cost: set a Replit Secret `HEADGRADE_DEMO` = `1` and press Run (or `python -m headgrade.cli serve --demo`). It builds a throwaway
 database of fictional companies (clearly labelled on every page and hidden from search engines) so you can check the site, the cards, the scorecard and the

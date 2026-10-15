@@ -134,7 +134,8 @@ def to_row(ef: ExtractedFact, company: Company, project: Project | None, doc: Do
 
 def ingest_pages(session: Session, company: Company, pages: list[str], kind: str, title: str, client,
                  effective_date: date | None = None, url: str | None = None, model: str | None = None,
-                 sha256: str | None = None) -> IngestSummary:
+                 sha256: str | None = None, extracted: list | None = None) -> IngestSummary:
+    """extracted: facts already read by someone else (a bundle); when given, no model is called."""
     sha = sha256 or hashlib.sha256("\n".join(pages).encode()).hexdigest()
     dup = session.scalar(select(Document).where(Document.company_id == company.id, Document.sha256 == sha))
     if dup:
@@ -143,7 +144,8 @@ def ingest_pages(session: Session, company: Company, pages: list[str], kind: str
                    pages_json=json.dumps(pages))
     session.add(doc)
     session.flush()
-    extracted = extract_document(client, company.name, kind, pages, model)
+    if extracted is None:
+        extracted = extract_document(client, company.name, kind, pages, model)
     saved = rejected = flagged = dups = 0
     seen: set[tuple] = set()
     for ef in extracted:
