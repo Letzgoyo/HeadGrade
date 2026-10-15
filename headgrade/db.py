@@ -206,6 +206,26 @@ def make_engine(url: str | None = None):
 
 def init_db(engine) -> None:
     Base.metadata.create_all(engine)
+    _add_missing_columns(engine)
+
+
+def _add_missing_columns(engine) -> None:
+    """create_all never alters an existing table. When a release adds a column, add it to databases made by an older release
+    (nullable, booleans default false) so an old file or Replit database keeps working instead of failing on first query."""
+    from sqlalchemy import Boolean, inspect, text
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in have:
+                    continue
+                ddl = f"ALTER TABLE {table.name} ADD COLUMN {col.name} {col.type.compile(engine.dialect)}"
+                if isinstance(col.type, Boolean):
+                    ddl += " DEFAULT 0" if engine.dialect.name == "sqlite" else " DEFAULT FALSE"
+                conn.execute(text(ddl))
 
 
 @contextmanager

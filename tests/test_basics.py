@@ -37,3 +37,22 @@ def test_factbook_prefers_verified_then_newest_and_tracks_inputs():
     assert c["inputs_used"] == 2 and c["verified"] == 2 and c["missing"] == 1
     fb2 = FactBook([F("cash", 5e6)], include_unverified=False)
     assert fb2.num("cash") is None                     # verified-only mode ignores unverified facts
+
+
+def test_init_db_adds_columns_missing_from_an_older_database(tmp_path):
+    import sqlite3
+    from sqlalchemy import inspect, text
+    from headgrade import db
+    path = tmp_path / "old.db"
+    con = sqlite3.connect(path)
+    con.execute("CREATE TABLE snapshots (id INTEGER PRIMARY KEY, company_id INTEGER, taken_at DATETIME, price FLOAT, price_date DATE, card_json TEXT, quality_score FLOAT, value_score FLOAT)")
+    con.execute("INSERT INTO snapshots (id, company_id, card_json) VALUES (1, 1, '{}')")
+    con.commit()
+    con.close()
+    eng = db.make_engine(f"sqlite:///{path}")
+    db.init_db(eng)
+    cols = {c["name"] for c in inspect(eng).get_columns("snapshots")}
+    assert {"published", "summary_json"} <= cols
+    with eng.connect() as c:
+        assert c.execute(text("SELECT published FROM snapshots")).scalar() == 0
+    db.init_db(eng)                       # idempotent
