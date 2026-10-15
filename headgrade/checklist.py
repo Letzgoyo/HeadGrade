@@ -44,6 +44,15 @@ SQUARES = [
 ]
 
 
+GROUPS = [
+    ("The asset", "What is in the ground and how it would be mined", ("grade", "life", "measured", "metallurgy", "low_cost", "expansion")),
+    ("The economics", "Does the study pay, and can it be funded", ("pea", "pfs", "fs", "financing", "working_capital")),
+    ("People and partners", "Who is running it and who is backing it", ("management", "partner", "major_partner")),
+    ("Permits, place and community", "Can it actually be built and operated", ("jurisdiction", "permits", "baseline", "pathway", "community", "opposition", "water", "infrastructure")),
+    ("The metal", "HeadGrade's own view of the market", ("hype", "supply")),
+]
+
+
 def _pick(fb: FactBook, key: str, label: str, **kw):
     """Look a fact up without noise; record it as an input (so it appears under Sources) only if it exists."""
     if fb.get(key, record=False, **kw) is None:
@@ -220,4 +229,5 @@ def evaluate(fb: FactBook, stage: str, projects, val: dict, jurisdiction_table: 
     squares = [out[i] for i, _, _ in SQUARES]
     counts = {s: sum(1 for q in squares if q["state"] == s) for s in ("yes", "no", "unknown", "na")}
     counts["applicable"] = counts["yes"] + counts["no"] + counts["unknown"]
-    return {"applicable": True, "lead_project": lead.name if lead else None, "metal": metal, "thresholds": th, "squares": squares, "counts": counts}
+    return {"applicable": True, "lead_project": lead.name if lead else None, "metal": metal, "thresholds": th, "squares": squares, "counts": counts,
+            "groups": [{"title": t, "blurb": b, "ids": list(ids)} for t, b, ids in GROUPS]}

@@ -14,10 +14,20 @@ main{max-width:900px;margin:0 auto;padding:24px 16px 64px}h1{margin:0;font-size:
 table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:600}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.flag{border-left:4px solid var(--warn);background:var(--card);padding:6px 10px;margin:6px 0;border-radius:4px}.flag.high{border-color:var(--bad)}
 .mut{color:var(--mut)}.small{font-size:12.5px}.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
-.cl{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}.sq{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--card);font-size:12.5px;line-height:1.35;min-height:92px}
-.sq b{display:block;font-size:12px;margin-bottom:3px}.sq .d{color:var(--mut);font-size:11.5px}.sq.yes{border-color:var(--good);border-width:2px}.sq.no{border-color:var(--bad)}.sq.unknown{border-style:dashed}.sq.na,.sq.free{opacity:.6}
-.sq .st{font-weight:700}.sq.yes .st{color:var(--good)}.sq.no .st{color:var(--bad)}.sq q{display:block;margin-top:3px;font-size:11px}
-@media(max-width:640px){.cl{grid-template-columns:repeat(2,1fr)}}
+.cl-hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:10px 0 14px}
+.cl-big{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}.cl-big small{font-size:18px;font-weight:500;color:var(--mut)}
+.cl-hero .wide{flex:1;min-width:240px}.bar{display:flex;gap:2px;height:10px}.bar i{display:block;border-radius:3px;min-width:3px}
+.bar .y{background:var(--good)}.bar .n{background:var(--bad)}.bar .u{background:var(--line)}.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mut)}
+.legend b{color:var(--fg)}.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.cl-groups{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}@media(max-width:720px){.cl-groups{grid-template-columns:1fr}}
+.grp{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card)}.grp.full{grid-column:1/-1}
+.grp h3{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:baseline}.grp h3 span{font-size:12px;color:var(--mut);font-weight:500}
+.grp .blurb{font-size:12px;color:var(--mut);margin:1px 0 8px}.grp .bar{height:6px;margin-bottom:6px}
+.it{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+.ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;margin-top:1px}
+.ic.yes{background:var(--good)}.ic.no{background:var(--bad)}.ic.unknown{background:transparent;color:var(--mut);border:1px dashed var(--mut)}.ic.na{background:transparent;color:var(--mut);border:1px solid var(--line)}
+.it .t{font-weight:600}.it .d{color:var(--mut);font-size:12.5px}.it.unknown .t,.it.na .t{color:var(--mut);font-weight:500}.it details{margin-top:3px}
+.it summary{cursor:pointer;font-size:12px;color:var(--acc)}.it q{display:block;margin-top:3px;font-size:12px}
 .pill.ok{color:var(--good);border-color:var(--good)}.pill.bad{color:var(--bad);border-color:var(--bad)}q{color:var(--mut)}
 """
 
@@ -127,32 +137,53 @@ def _valuation_section(v: dict, deck: dict) -> str:
     return "".join(out)
 
 
-_MARK = {"yes": "\u2713 Yes", "no": "\u2717 No", "unknown": "? Unknown", "na": "\u2013 Not applicable", "free": "Free square"}
+_ICON = {"yes": "\u2713", "no": "\u2717", "unknown": "?", "na": "\u2013"}
+_WORD = {"yes": "Yes", "no": "No", "unknown": "Unknown", "na": "Not applicable"}
+
+
+def _bar(c: dict, total: int) -> str:
+    if not total:
+        return ""
+    seg = [("y", c["yes"], "yes"), ("n", c["no"], "no"), ("u", c["unknown"], "unknown")]
+    return "<div class='bar' role='img' aria-label='" + escape(", ".join(f"{n} {k}" for _, n, k in seg)) + "'>" + "".join(
+        f"<i class='{cls}' style='flex:{n}'></i>" for cls, n, _ in seg if n) + "</div>"
+
+
+def _item(q: dict, draft: bool) -> str:
+    st = q["state"]
+    more = ""
+    if q["evidence"] and q["evidence"][0].get("quote"):
+        e = q["evidence"][0]
+        more = (f"<details><summary>Source</summary><q>{escape(e['quote'][:240])}</q>"
+                f"<span class='d'>{escape(e.get('document') or '')}, p.{e.get('page')}</span></details>")
+    flag = " <span class='pill'>unverified</span>" if q.get("unverified") and draft else ""
+    return (f"<div class='it {st}'><div class='ic {st}' title='{_WORD[st]}'>{_ICON[st]}</div><div>"
+            f"<div class='t'>{escape(q['title'])}{flag}</div><div class='d'>{escape(q['detail']) if st != 'unknown' or q['detail'] else ''}</div>{more}</div></div>")
 
 
 def _checklist_section(cl: dict | None, draft: bool) -> str:
     if not cl:
         return ""
     if not cl.get("applicable"):
-        return f"<h2>Project checklist</h2><p class='small mut'>{escape(cl.get('reason', ''))}</p>"
-    c = cl["counts"]
-    h = [f"<h2>Project checklist</h2><p><b>{c['yes']} of {c['applicable']}</b> squares ticked"
-         + (f" &middot; {c['no']} no &middot; {c['unknown']} unknown" if c["applicable"] else "")
-         + (f" &middot; {c['na']} not applicable" if c["na"] else "")
-         + f"<br><span class='small mut'>Lead project: {escape(cl.get('lead_project') or 'company level')}. "
-           "Each square is a yes/no test of project readiness. <b>Unknown means we found no sourced statement, not that the answer is no.</b> "
-           "This panel is separate from the grades and does not change them. Thresholds are our settings, not guarantees.</span></p><div class='cl'>"]
-    for q in cl["squares"]:
-        quote = ""
-        if q["evidence"] and q["evidence"][0].get("quote"):
-            e = q["evidence"][0]
-            quote = f"<q>{escape(e['quote'][:140])}</q><span class='d'>{escape(e.get('document') or '')} p.{e.get('page')}</span>"
-        if q["state"] == "free":
-            h.append("<div class='sq free'><b style='text-align:center;margin-top:24px'>Free square</b></div>")
-            continue
-        flag = " (unverified)" if q.get("unverified") and draft else ""
-        h.append(f"<div class='sq {q['state']}'><b>{escape(q['title'])}</b><span class='st'>{_MARK[q['state']]}{flag}</span>"
-                 f"<div class='d'>{escape(q['detail'])}</div>{quote}</div>")
+        return f"<h2>Project scorecard</h2><p class='small mut'>{escape(cl.get('reason', ''))}</p>"
+    c, by = cl["counts"], {q["id"]: q for q in cl["squares"]}
+    h = [f"<h2>Project scorecard</h2><div class='cl-hero'><div class='cl-big'>{c['yes']}<small> of {c['applicable']} tests passed</small></div>"
+         f"<div class='wide'>{_bar(c, c['applicable'])}<div class='legend'>"
+         f"<span><span class='dot' style='background:var(--good)'></span><b>{c['yes']}</b> passed</span>"
+         f"<span><span class='dot' style='background:var(--bad)'></span><b>{c['no']}</b> failed</span>"
+         f"<span><span class='dot' style='background:var(--line);border:1px dashed var(--mut)'></span><b>{c['unknown']}</b> unknown</span>"
+         + (f"<span><b>{c['na']}</b> not applicable</span>" if c["na"] else "") + "</div></div></div>",
+         f"<p class='small mut'>Lead project: {escape(cl.get('lead_project') or 'company level')}. Unknown means we found no sourced statement, "
+         "<b>not</b> that the answer is no. This scorecard is separate from the grades and does not change them. Thresholds are our settings, not guarantees.</p>"
+         "<div class='cl-groups'>"]
+    groups = cl.get("groups") or []
+    for i, gp in enumerate(groups):
+        qs = [by[x] for x in gp["ids"] if x in by]
+        app = [q for q in qs if q["state"] != "na"]
+        gc = {k: sum(1 for q in qs if q["state"] == k) for k in ("yes", "no", "unknown")}
+        full = " full" if i == len(groups) - 1 and len(groups) % 2 else ""
+        h.append(f"<div class='grp{full}'><h3>{escape(gp['title'])}<span>{gc['yes']} of {len(app)}</span></h3>"
+                 f"<div class='blurb'>{escape(gp['blurb'])}</div>{_bar(gc, len(app))}" + "".join(_item(q, draft) for q in qs) + "</div>")
     h.append("</div>")
     return "".join(h)
 

@@ -103,7 +103,7 @@ def test_weekly_end_to_end_two_readings_one_conflict(engine):
         card = json.loads(snap.card_json)
         assert card["mode"] == "published" and card["grade"]["confidence"]["auto_verified"] >= 1
         assert card["checklist"]["applicable"] and len(card["checklist"]["squares"]) == 25
-        assert "Project checklist" in render_html(card)
+        assert "Project scorecard" in render_html(card)
         assert not any(e["label"].startswith("AU AISC") for e in card["evidence"])      # the disputed number is not used
         # the disputed fact is first in a person's queue
         assert review.queue(s, co.id)[0].key == "aisc_per_unit"
