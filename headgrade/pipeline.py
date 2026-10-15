@@ -102,8 +102,18 @@ def card_json(card: dict) -> str:
     return json.dumps(card, default=_jsonable, indent=1)
 
 
+def summarize(card: dict) -> dict:
+    """What a directory row needs, so listing thousands of companies never means parsing thousands of full cards."""
+    g, cl = card["grade"], card.get("checklist") or {}
+    c = cl.get("counts") or {}
+    return {"quality_grade": g["quality_grade"], "value_grade": g["value_grade"], "quality_score": g["quality_score"], "value_score": g["value_score"],
+            "confidence": g["confidence"]["level"], "quadrant": g["quadrant"], "red_flags": len(g["red_flags"]),
+            "checklist_yes": c.get("yes"), "checklist_of": c.get("applicable"), "mode": card["mode"],
+            "price": card["market"]["price"], "currency": card["market"]["currency"], "price_date": card["market"]["price_date"]}
+
+
 def save_snapshot(session: Session, company: Company, card: dict) -> Snapshot:
-    s = Snapshot(company_id=company.id, price=card["market"]["price"], card_json=card_json(card),
+    s = Snapshot(company_id=company.id, price=card["market"]["price"], card_json=card_json(card), summary_json=json.dumps(summarize(card)), published=card["mode"] == "published",
                  price_date=date.fromisoformat(card["market"]["price_date"]) if card["market"]["price_date"] else None,
                  quality_score=card["grade"]["quality_score"], value_score=card["grade"]["value_score"])
     session.add(s)

@@ -195,12 +195,17 @@ def _checklist_section(cl: dict | None, draft: bool) -> str:
 
 
 def render_html(card: dict, changes: list[str] | None = None) -> str:
+    """A standalone page (used by the CLI and the review app). The public site wraps card_body() in its own layout."""
+    return (f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>{escape(card['company']['name'])} | HeadGrade</title><link rel='icon' href=\"{brand.FAVICON_HREF}\"><style>{CSS}</style></head>"
+            f"<body><main>{brand.header_html()}{card_body(card, changes)}</main></body></html>")
+
+
+def card_body(card: dict, changes: list[str] | None = None) -> str:
     c, g, v = card["company"], card["grade"], card["valuation"]
     draft = card["mode"] != "published"
     conf = g["confidence"]
-    h = [f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-         f"<title>{escape(c['name'])} | HeadGrade</title><link rel='icon' href=\"{brand.FAVICON_HREF}\"><style>{CSS}</style></head><body><main>{brand.header_html()}",
-         f"<h1>{escape(c['name'])}</h1><div class='sub'>{escape(c['ticker'])} &middot; {escape(c['stage'])} &middot; "
+    h = [f"<h1>{escape(c['name'])}</h1><div class='sub'>{escape(c['ticker'])} &middot; {escape(c['stage'])} &middot; "
          f"{', '.join(m.upper() for m in c['metals'])} &middot; {escape(c.get('jurisdiction') or '')}</div>"]
     if draft:
         h.append("<div class='draft'><b>DRAFT.</b> This preview includes facts that have not been verified by a person. Do not publish.</div>")
@@ -240,5 +245,5 @@ def render_html(card: dict, changes: list[str] | None = None) -> str:
         h.append(f"<tr><td>{escape(e['label'])}</td><td>{escape(fmt_value(e))}</td><td><span class='pill {'ok' if ok else 'bad'}'>{escape(label)}</span></td><td class='small'>{src}</td></tr>")
     h.append("</table><p class='small mut'>General information and modelled estimates from public documents, not personal financial advice. "
              "Grades are produced by a published method from the inputs shown and can be wrong. Do your own research.</p>"
-             f"<p class='small mut'>Generated {escape(card['generated_at'])}</p></main></body></html>")
+             f"<p class='small mut'>Generated {escape(card['generated_at'])}</p>")
     return "".join(h)

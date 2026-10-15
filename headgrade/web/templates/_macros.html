@@ -1,0 +1,2 @@
+{% macro chip(letter) %}{% set l = (letter or 'n/a')|lower %}<span class="gc g-{{ l if l in ['a','b','c','d','f'] else 'na' }}" title="{{ 'Grade ' ~ letter if l in ['a','b','c','d','f'] else 'Not rated' }}">{{ letter if l in ['a','b','c','d','f'] else '–' }}</span>{% endmacro %}
+{% macro logo() %}<a href="{{ url_for('home') }}" aria-label="HeadGrade home"><span class="lg lt">{{ brand.ICON|safe }}</span><span class="lg dk">{{ brand.ICON_DARK|safe }}</span><span class="bn">Head<b>Grade</b></span></a>{% endmacro %}

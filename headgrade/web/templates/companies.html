@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% from "_macros.html" import chip %}
+{% block content %}
+<div class="wrap" style="padding-top:28px;padding-bottom:20px"><h1 style="margin:0 0 4px;font-size:30px;letter-spacing:-.02em">Companies</h1>
+<p class="sub" style="margin:0 0 14px">{{ '{:,}'.format(total) }} graded {{ 'company' if total == 1 else 'companies' }}{% if q or metal or stage %} matching your filters{% endif %}.</p>
+<form class="filters" method="get" action="{{ url_for('companies') }}" role="search">
+<input type="search" name="q" value="{{ q }}" placeholder="Search name or ticker" aria-label="Search">
+<select name="metal" aria-label="Metal"><option value="">All metals</option>{% for k, v in metal_names.items() if k in ['au','ag','cu','u3o8','ni'] %}<option value="{{ k }}" {{ 'selected' if k == metal }}>{{ v }}</option>{% endfor %}</select>
+<select name="stage" aria-label="Stage"><option value="">All stages</option>{% for k, v in stage_names.items() %}<option value="{{ k }}" {{ 'selected' if k == stage }}>{{ v }}</option>{% endfor %}</select>
+<select name="sort" aria-label="Sort">{% for k, v in sorts.items() %}<option value="{{ k }}" {{ 'selected' if k == sort }}>Sort: {{ v }}</option>{% endfor %}</select>
+<button type="submit">Filter</button></form>
+{% if rows %}
+<div class="scroll"><table class="dir"><thead><tr><th>Company</th><th>Metals</th><th>Stage</th><th>Quality</th><th>Valuation</th><th class="hide-s">Scorecard</th><th class="hide-s">Confidence</th><th class="hide-s">Updated</th></tr></thead><tbody>
+{% for r in rows %}<tr><td class="nm"><a href="{{ url_for('company', ticker=r.ticker) }}">{{ r.name }}</a><small>{{ r.ticker }}{% if r.jurisdiction %} &middot; {{ r.jurisdiction }}{% endif %}</small></td>
+<td>{{ r.metals|map('upper')|join(', ') }}</td><td>{{ r.stage_name }}</td><td>{{ chip(r.quality_grade) }}</td><td>{{ chip(r.value_grade) }}</td>
+<td class="hide-s">{% if r.checklist_of %}{{ r.checklist_yes }} of {{ r.checklist_of }}{% else %}–{% endif %}</td><td class="hide-s">{{ r.confidence|capitalize }}</td><td class="hide-s">{{ r.updated.strftime('%d %b %Y') }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if pages > 1 %}<div class="pager">{% if page > 1 %}<a href="{{ url_for('companies', page=page-1, **args) }}">&larr; Previous</a>{% endif %}<span>Page {{ page }} of {{ pages }}</span>{% if page < pages %}<a href="{{ url_for('companies', page=page+1, **args) }}">Next &rarr;</a>{% endif %}</div>{% endif %}
+{% if map_svg %}<h2 style="font-size:19px;margin:30px 0 8px">Quality against valuation</h2><div class="mapbox">{{ map_svg|safe }}</div>
+<p class="caption">Each dot is a rated company (up to 400 shown). Hover for the grades, click for the card. Dashed lines mark our thresholds. This is a map of the method's output, not a list of recommendations.</p>{% endif %}
+{% else %}<div class="empty">No graded companies match. {% if q or metal or stage %}<a href="{{ url_for('companies') }}">Clear filters</a>{% else %}The first cards are being prepared.{% endif %}</div>{% endif %}
+</div>{% endblock %}

@@ -19,6 +19,16 @@ from headgrade.render import render_html
 from headgrade.valuation import Market
 
 st.set_page_config(page_title="HeadGrade review", page_icon=str(Path(__file__).parent / "brand" / "headgrade-app-icon.png"), layout="wide")
+_pw = os.getenv("ADMIN_PASSWORD")
+if _pw and not st.session_state.get("authed"):
+    st.title("HeadGrade admin")
+    entered = st.text_input("Password", type="password")
+    if entered and entered == _pw:
+        st.session_state["authed"] = True
+        st.rerun()
+    elif entered:
+        st.error("Wrong password.")
+    st.stop()
 engine = db.make_engine()
 db.init_db(engine)
 

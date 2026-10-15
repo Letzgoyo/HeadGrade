@@ -80,6 +80,17 @@ potential is judged separately at the asset level; the overall Investment Attrac
 survey marks as low-sample (5-9 responses) are flagged. For multi-mine companies the score is weighted by each project's stated
 share of production/NAV, and 20%+ exposure to a jurisdiction scoring under 40 raises a red flag. Credit Fraser on any public page.
 
+## The public website
+`python -m headgrade.cli serve` (development) or `gunicorn -b 0.0.0.0:8080 headgrade.wsgi:app` (what `.replit` runs). It is read-only and shows only
+**published** cards (built from verified facts); drafts and the review tools are never reachable. Pages: home, company directory (search, metal, stage,
+sort, quality-vs-valuation map), one page per company (card, scorecard, sources, grade history), methodology, about, disclosures and terms, plus
+`/sitemap.xml`, `/robots.txt` and `/healthz`. Legal pages are marked DRAFT until you set `HEADGRADE_LEGAL_DRAFT=0` after a lawyer has reviewed them.
+Set `HEADGRADE_SITE_URL=https://yourdomain` for correct canonical and sitemap links. Brand and colour rules: `brand/STYLE.md`.
+Preview with fictional data: `python examples/seed_site_demo.py demo_out` then `DATABASE_URL=sqlite:///demo_out/demo.db python -m headgrade.cli serve`.
+
+**Admin screen:** `ADMIN_PASSWORD=... streamlit run review_app.py --server.port 8501` in the workspace shell. Do not publish it in the deployment, and always set
+`ADMIN_PASSWORD`. Public deployments need a real database (`DATABASE_URL`, Postgres) rather than a local file, because Replit deployments do not keep files.
+
 ## Run on Replit (first live test: B2Gold)
 1. Create Repl > Import from GitHub > `Letzgoyo/HeadGrade`. In the Shell: `pip install -r requirements.txt`.
 2. Secrets: `ANTHROPIC_API_KEY`, and `SEC_USER_AGENT` = `Your Name your@email.com` (SEC requires it).
@@ -94,7 +105,7 @@ python -m headgrade.cli weekly --ticker BTG --since-days 250 --dry-run          
 python -m headgrade.cli weekly --ticker BTG --since-days 250 --max-total-docs 6 # small paid run (cap)
 python -m headgrade.cli queue --ticker BTG
 ```
-4. Press **Run** to open the review app. Re-run the capped `weekly` command to continue where the cap stopped.
+4. To see the review screen: `streamlit run review_app.py --server.port 8501` (the **Run** button starts the public site on port 8080). Re-run the capped `weekly` command to continue where the cap stopped.
 
 ## Claude API key
 Only needed to read documents. Create a key at console.anthropic.com and store it as a secret named `ANTHROPIC_API_KEY`

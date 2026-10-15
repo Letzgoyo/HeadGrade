@@ -1,0 +1,22 @@
+{% from '_macros.html' import logo with context %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }}</title>
+<meta name="description" content="{{ desc|default('Source-backed grades for mining companies.') }}">
+<link rel="canonical" href="{{ base }}{{ request.path }}">
+<link rel="icon" href="{{ url_for('brand_file', name='headgrade-app-icon.svg') }}" type="image/svg+xml">
+<meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ desc|default('Source-backed grades for mining companies.') }}">
+<meta property="og:type" content="website"><meta property="og:image" content="{{ base }}/brand/png/headgrade-x-profile-800.png"><meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0e6b7a">
+<style>{{ card_css|safe }}</style><link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head><body>
+<header class="nav"><div class="wrap"><div class="brand">{{ logo() }}</div>
+<nav aria-label="Main"><ul>
+{% for ep, label in [('companies','Companies'),('methodology','Methodology'),('about','About'),('disclosures','Disclosures')] %}
+<li><a href="{{ url_for(ep) }}" {% if request.endpoint == ep or (ep == 'companies' and request.endpoint == 'company') %}aria-current="page"{% endif %}>{{ label }}</a></li>{% endfor %}
+</ul></nav></div></header>
+<main>{% block content %}{% endblock %}</main>
+<footer class="site"><div class="wrap"><div class="cols"><div><div class="brand">{{ logo() }}</div><p>{{ tagline }} Source-backed grades for gold, silver, copper, uranium and nickel mining companies.</p></div>
+<ul><li><a href="{{ url_for('companies') }}">Companies</a></li><li><a href="{{ url_for('methodology') }}">Methodology</a></li><li><a href="{{ url_for('about') }}">About</a></li><li><a href="{{ url_for('disclosures') }}">Disclosures and terms</a></li></ul></div>
+<p>General information and modelled estimates from public documents. Not personal advice and not a recommendation to buy, hold or sell anything. Grades come from a published method applied to the inputs shown and can be wrong. The site owner may hold positions in covered companies; any such holding is disclosed on that company's page. Do your own research.</p>
+<p>&copy; {{ year }} HeadGrade</p></div></footer></body></html>

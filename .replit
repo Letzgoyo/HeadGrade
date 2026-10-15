@@ -1,12 +1,13 @@
-run = "streamlit run review_app.py --server.port 8080 --server.address 0.0.0.0 --server.headless true"
-entrypoint = "review_app.py"
+# Public site (what visitors see). The admin/review screen is separate: run it in the workspace shell, never in the deployment.
+run = "gunicorn -b 0.0.0.0:8080 --workers 2 headgrade.wsgi:app"
+entrypoint = "headgrade/site.py"
 modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "streamlit run review_app.py --server.port 8080 --server.address 0.0.0.0 --server.headless true"]
+run = ["sh", "-c", "gunicorn -b 0.0.0.0:8080 --workers 2 headgrade.wsgi:app"]
 deploymentTarget = "cloudrun"
 
 [[ports]]

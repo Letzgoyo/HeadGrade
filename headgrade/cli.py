@@ -33,6 +33,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="headgrade")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
+    sv = sub.add_parser("serve", help="run the public website (read-only; shows published cards only)")
+    sv.add_argument("--port", type=int, default=8080); sv.add_argument("--host", default="0.0.0.0")
     c = sub.add_parser("company-add")
     c.add_argument("--name", required=True); c.add_argument("--ticker", required=True)
     c.add_argument("--stage", choices=STAGES, required=True); c.add_argument("--metals", default="au")
@@ -126,6 +128,9 @@ def main(argv=None) -> int:
             from . import universe
             from .edgar import Edgar
             print(universe.scan_sec(Edgar(), s, tuple(a.sic) if a.sic else universe.MINING_SIC, a.limit))
+        elif a.cmd == "serve":
+            from .site import create_app
+            create_app(engine).run(host=a.host, port=a.port)
         elif a.cmd == "weekly":
             import anthropic
             from . import config, weekly

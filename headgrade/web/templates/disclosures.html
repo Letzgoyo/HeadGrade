@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block content %}<article class="prose">
+{% if legal_draft %}<div class="draftbar"><b>Draft wording.</b> This page has not been reviewed by a lawyer. Do not rely on it as final terms.</div>{% endif %}
+<h1>Disclosures and terms</h1>
+<h2>Not advice</h2>
+<p>HeadGrade publishes general information and modelled estimates derived from public documents. It is not personal financial, investment, legal or tax advice, it does not consider your circumstances, and nothing here is a recommendation or an offer to buy, hold or sell any security. Mining securities, especially exploration and development companies, can lose most or all of their value.</p>
+<h2>Positions and conflicts</h2>
+<p>The site owner may hold positions in companies covered here. Where that is the case, the company's page carries a disclosure at the top. Positions can change without notice.</p>
+<h2>Sponsorship</h2>
+<p>If a company sponsors HeadGrade, its page says so. Sponsorship is not an input to any grade.</p>
+<h2>Accuracy</h2>
+<p>Figures are extracted from company documents by software, checked by software and, for exceptions, by a person. Errors can still occur. Each card links the exact source so you can verify it. Modelled values (such as net asset value at today's metal prices) are estimates built on assumptions listed on each card and on the <a href="{{ url_for('methodology') }}">methodology page</a>. Grades are an output of a method applied to the inputs shown and can be wrong. Prices and metal decks are dated and may be delayed.</p>
+<h2>Data sources</h2>
+<p>Company filings (including those on the US SEC's EDGAR system), and the Fraser Institute's Annual Survey of Mining Companies for jurisdiction policy scores. Third-party names and data remain the property of their owners. Quotes are short extracts used to show the source of a figure.</p>
+<h2>Terms of use</h2>
+<p>The content is provided "as is" for your personal, non-commercial information. Automated copying of the site at scale is not permitted without permission. To the extent permitted by law, HeadGrade is not liable for losses arising from use of the information. Full terms will be published before launch.</p>
+<h2>Privacy</h2>
+<p>This site does not currently use accounts, advertising or tracking cookies. If that changes, this page will say so.</p>
+</article>{% endblock %}

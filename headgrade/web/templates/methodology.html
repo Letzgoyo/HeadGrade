@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block content %}<article class="prose">
+<h1>How HeadGrade grades mining companies</h1>
+<p class="mut">The short version: every figure is traced to a quote in a filing, checked by code and by a second reading, and only verified figures reach a published card. Grades come from a fixed method, not opinion. This page describes that method, including where it is weak.</p>
+
+<h2>1. Where the numbers come from</h2>
+<ul><li><b>Company filings.</b> Annual and quarterly reports, results releases, MD&amp;A, annual information forms, presentations and technical reports. Today we retrieve these automatically from the US SEC's EDGAR system.</li>
+<li><b>Jurisdiction policy scores.</b> The Fraser Institute's Annual Survey of Mining Companies, Policy Perception Index.</li>
+<li><b>Metal prices.</b> A dated price deck, shown on every card. Share prices are dated too.</li></ul>
+<div class="callout"><b>Coverage today.</b> Companies that file with the SEC. Companies that report only to Canadian (SEDAR+) or Australian (ASX) regulators are not covered yet, so many junior explorers are missing.</div>
+
+<h2>2. How a figure becomes a fact</h2>
+<ol><li><b>Extraction.</b> An AI model reads the document and may only report figures from a fixed list. For every figure it must copy the exact sentence it came from and the page number. It is told never to calculate, convert or guess.</li>
+<li><b>Quote check, in code.</b> We confirm the quote really appears on that page and that the figure really appears in the quote. If not, the fact is rejected automatically.</li>
+<li><b>Second, independent reading.</b> A different model reads the same document without seeing the first result. Agreement is required, allowing for rounding. A transposed digit does not pass.</li>
+<li><b>Consistency checks.</b> Plausible ranges for each kind of number, arithmetic (for example measured plus indicated must equal the combined figure), and agreement with other documents for the same date.</li>
+<li><b>People for exceptions.</b> Anything that fails a check goes to a human reviewer. A sample of automatic approvals is audited to measure how often the machine is wrong.</li>
+<li><b>Published cards use verified facts only.</b> Each card says how many inputs were verified, and how many by a person versus automatically.</li></ol>
+<p>Nothing is guessed. When a fact is missing, the card says so and the confidence level drops.</p>
+
+<h2>3. The two grades</h2>
+<p>Quality and valuation are kept separate so a good company is never mistaken for a good price. Letters follow the scores: <b>A</b> 80+, <b>B</b> 65+, <b>C</b> 50+, <b>D</b> 35+, <b>F</b> below 35.</p>
+<h3>Quality grade</h3>
+<table><tr><th>Category</th><th class="n">Weight</th><th>What is measured</th></tr>
+<tr><td>Asset</td><td class="n">30</td><td>Developers: IRR and mine life. Producers: margin over all-in sustaining cost and reserve life. Explorers: share of the resource that is measured or indicated.</td></tr>
+<tr><td>Team</td><td class="n">20</td><td>Mines previously built, insider ownership, share-count dilution history. Regulatory actions reduce the score.</td></tr>
+<tr><td>Financial strength</td><td class="n">20</td><td>Explorers: cash runway. Developers: funding gap against market value. Producers: net debt to EBITDA and cash flow under a price stress.</td></tr>
+<tr><td>Jurisdiction</td><td class="n">15</td><td>Fraser policy score for each project's location, weighted by that project's share of the company, blended with permitting status.</td></tr>
+<tr><td>Growth</td><td class="n">15</td><td>Not scored yet. It needs resource history over time.</td></tr></table>
+<p>A category with no data is left out, not filled in. A quality grade needs at least three categories.</p>
+<h3>Valuation grade, by stage</h3>
+<ul><li><b>Developers.</b> We rebuild each project's after-tax NPV from the stated production, capital cost, tax and discount rate, calibrated so it reproduces the study's own published NPV at the study's own prices. We then re-price it at today's metal deck. Price-to-NAV is compared with a typical range for the study stage (PEA 0.20 to 0.40, PFS 0.30 to 0.50, feasibility 0.45 to 0.70, construction 0.65 to 0.95). If the company must raise equity to build, we score the pro-forma figure after that dilution.</li>
+<li><b>Producers.</b> Free cash flow yield normalised to the price deck, and EV/EBITDA, with a stress test for a 20% fall in metal prices.</li>
+<li><b>Explorers and royalty companies.</b> Valued only against peer benchmarks, and shown as <i>not rated</i> until those benchmarks are loaded. We do not invent a value.</li></ul>
+<div class="callout"><b>Weak spots, stated plainly.</b> The typical price-to-NAV ranges are rules of thumb, not measured peer data. The NPV model is simplified (flat production, straight-line depreciation, no working capital or closure costs). A study's costs may be out of date, and cards flag studies older than three years.</div>
+
+<h2>4. The project scorecard</h2>
+<p>Twenty-four yes/no tests of project readiness: grade against cutoff, mine life, processing, jurisdiction, study economics, management, partners, community, measured share of the resource, water, permitting, infrastructure, funding and cash. Each square is <b>yes</b>, <b>no</b>, <b>unknown</b> (nothing sourced found, never a guess) or <b>not applicable</b> to the company's stage. Statement-based squares need a verbatim quote and pass through the same verification as every other fact. The scorecard does not change the grades. Thresholds are our settings and are listed with each card's method.</p>
+
+<h2>5. Confidence</h2>
+<p>High, medium or low, based on how many of the inputs used were verified and how many quality categories had data. A grade with low confidence deserves less weight than the letter suggests.</p>
+
+<h2>6. What HeadGrade does not do</h2>
+<ul><li>It does not tell you to buy, hold or sell anything.</li><li>It does not forecast share prices.</li><li>It does not cover every company yet.</li><li>It can be wrong. Sources are linked so you can check.</li></ul>
+<p>Spotted an error? Every input shows its source. Tell us and we will correct it. See <a href="{{ url_for('disclosures') }}">Disclosures</a> for positions, sponsorship and terms.</p>
+</article>{% endblock %}

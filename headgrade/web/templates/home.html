@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% from "_macros.html" import chip %}
+{% block content %}
+<section class="hero"><div class="wrap">
+<p class="pull">{{ tagline }}</p>
+<h1>Mining stocks, graded from the filings.</h1>
+<p class="lead">Source-backed grades, valuations and project scorecards for gold, silver, copper, uranium and nickel companies. Every number links to the document it came from.</p>
+<a class="btn" href="{{ url_for('companies') }}">Browse companies</a><a class="btn ghost" href="{{ url_for('methodology') }}">How we grade</a>
+<div class="tiles">
+<div class="tile"><b>{{ '{:,}'.format(stats.companies) }}</b><span>companies graded</span></div>
+<div class="tile"><b>{{ '{:,}'.format(stats.facts) }}</b><span>verified facts behind the cards</span></div>
+<div class="tile"><b>5</b><span>metals: gold, silver, copper, uranium, nickel</span></div>
+<div class="tile"><b>{{ stats.updated.strftime('%d %b %Y') if stats.updated else 'Soon' }}</b><span>latest update</span></div>
+</div></div></section>
+
+<section class="s"><div class="wrap"><h2>What is on every card</h2><p class="intro">Quality and price are kept apart, so a good company is never confused with a good price.</p>
+<div class="three">
+<div class="feat"><div class="k">Q</div><h3>Quality grade</h3><p>Team, asset, jurisdiction, financial strength and growth, scored only from facts we could source. Missing data lowers confidence; it is never guessed.</p></div>
+<div class="feat"><div class="k">V</div><h3>Valuation grade</h3><p>Priced against its own stage: net asset value for developers, free cash flow for producers. Normalised to a common metal price deck and stress-tested.</p></div>
+<div class="feat"><div class="k">&#10003;</div><h3>Project scorecard</h3><p>24 yes/no tests of project readiness, from grade and mine life to permits, partners and funding. Unknown never counts as a fail.</p></div>
+</div></div></section>
+
+{% if rows %}
+<section class="s" style="background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="wrap"><h2>Recently updated</h2>
+<div class="scroll"><table class="dir"><thead><tr><th>Company</th><th>Stage</th><th>Quality</th><th>Valuation</th><th class="hide-s">Scorecard</th><th class="hide-s">Updated</th></tr></thead><tbody>
+{% for r in rows %}<tr><td class="nm"><a href="{{ url_for('company', ticker=r.ticker) }}">{{ r.name }}</a><small>{{ r.ticker }}</small></td><td>{{ r.stage_name }}</td>
+<td>{{ chip(r.quality_grade) }}</td><td>{{ chip(r.value_grade) }}</td><td class="hide-s">{% if r.checklist_of %}{{ r.checklist_yes }} of {{ r.checklist_of }}{% else %}–{% endif %}</td><td class="hide-s">{{ r.updated.strftime('%d %b') }}</td></tr>{% endfor %}
+</tbody></table></div><p><a href="{{ url_for('companies') }}">See all companies &rarr;</a></p></div></section>
+{% if map_svg %}<section class="s"><div class="wrap"><h2>Quality against valuation</h2><p class="intro">Each dot is a rated company. The dashed lines mark our thresholds. This is a map of the method's output, not a list of recommendations.</p>
+<div class="mapbox">{{ map_svg|safe }}</div></div></section>{% endif %}
+{% else %}
+<section class="s"><div class="wrap"><div class="empty"><b>The first cards are being prepared.</b><br>Cards appear here once every input has been checked.</div></div></section>
+{% endif %}
+
+<section class="s"><div class="wrap"><h2>How we keep it honest</h2><div class="three">
+<div class="feat"><h3>Every input has a source</h3><p>Each figure carries a verbatim quote, the document and the page. Click through to see exactly where it came from.</p></div>
+<div class="feat"><h3>Two readings, then a check</h3><p>Documents are read twice independently. Figures that disagree, or fail an arithmetic or range check, are held for a person. Only verified facts reach a published card.</p></div>
+<div class="feat"><h3>Disclosed, always</h3><p>If the site owner holds a position or a company sponsors the site, the card says so at the top. Sponsorship never changes a grade.</p></div>
+</div><p class="caption">Coverage today: companies that file with the US SEC. Canadian and Australian-only filers are not covered yet. <a href="{{ url_for('methodology') }}">Read the full method.</a></p></div></section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% from "_macros.html" import chip %}
+{% block content %}
+<div class="card-wrap"><p class="small mut" style="margin:14px 0 0"><a href="{{ url_for('companies') }}">&larr; All companies</a></p>{{ body|safe }}</div>
+{% if history|length > 1 %}<div class="history"><h2>Grade history</h2><div class="scroll"><table class="dir"><thead><tr><th>Date</th><th>Quality</th><th>Valuation</th><th>Share price</th></tr></thead><tbody>
+{% for h in history %}<tr><td>{{ h.date.strftime('%d %b %Y') }}</td><td>{{ chip(h.q) }} {% if h.qs is not none %}<span class="mut small">{{ '%.0f'|format(h.qs) }}</span>{% endif %}</td><td>{{ chip(h.v) }} {% if h.vs is not none %}<span class="mut small">{{ '%.0f'|format(h.vs) }}</span>{% endif %}</td><td>{{ '%.2f'|format(h.price) if h.price else '–' }}</td></tr>{% endfor %}
+</tbody></table></div></div>{% endif %}
+{% endblock %}

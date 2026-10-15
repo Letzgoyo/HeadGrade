@@ -141,6 +141,8 @@ class Snapshot(Base):
     card_json: Mapped[str] = mapped_column(Text)  # the whole card as published that week
     quality_score: Mapped[float | None] = mapped_column(Float)
     value_score: Mapped[float | None] = mapped_column(Float)
+    published: Mapped[bool] = mapped_column(default=False)  # built from verified facts only: the only kind the public site shows
+    summary_json: Mapped[str | None] = mapped_column(Text)  # small digest for directory pages, so they never parse whole cards
 
 
 class Filing(Base):

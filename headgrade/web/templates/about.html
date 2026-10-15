@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block content %}<article class="prose">
+<h1>About HeadGrade</h1>
+<p class="pull" style="font-weight:700;color:var(--acc)">{{ tagline }}</p>
+<p>Mining stocks are driven by stories. The documents behind the stories are public, long and hard to compare. HeadGrade reads them, checks every number against its source, and grades each company by a fixed method so that companies can be compared on the same footing.</p>
+<h2>What we believe</h2>
+<ul><li><b>Show the work.</b> Every input links to the quote it came from. If we cannot source it, we say "unknown".</li>
+<li><b>Separate the company from the price.</b> A strong project can be expensive and a weak one cheap. We grade both, apart.</li>
+<li><b>Disclose everything.</b> Positions held by the owner and any sponsorship are stated on the card.</li>
+<li><b>Be honest about limits.</b> Our <a href="{{ url_for('methodology') }}">method page</a> lists the weak spots, including where we use rules of thumb.</li></ul>
+<h2>Who runs it</h2>
+<p>HeadGrade is run by an individual who invests in the sector and wanted a way to read the filings at scale. The owner may hold positions in covered companies. Where that is the case, the company's page says so at the top.</p>
+<h2>Sponsorship</h2>
+<p>Mining companies may be able to sponsor the site in future. Sponsors are labelled on their page, and sponsorship does not change a grade.</p>
+<h2>Contact</h2>
+<p>Corrections and questions are welcome. Contact details will be added here before launch.</p>
+</article>{% endblock %}
