@@ -3,10 +3,16 @@ from __future__ import annotations
 
 from html import escape
 
+from . import brand
+
 CSS = """
-:root{--bg:#fff;--fg:#1c2430;--mut:#667085;--line:#e4e7ec;--card:#f8f9fb;--good:#1a7f5a;--warn:#b7791f;--bad:#c0392b;--acc:#2a62d9}
-@media(prefers-color-scheme:dark){:root{--bg:#10151c;--fg:#e8ecf2;--mut:#98a2b3;--line:#2a3340;--card:#171e28;--good:#47c28f;--warn:#e0a84a;--bad:#ef6b5b;--acc:#7da4ff}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+:root{--bg:#fff;--fg:#1c2430;--mut:#667085;--line:#e4e7ec;--card:#f8f9fb;--good:#1a7f5a;--warn:#b7791f;--bad:#c0392b;--acc:#0e6b7a}
+@media(prefers-color-scheme:dark){:root{--bg:#10151c;--fg:#e8ecf2;--mut:#98a2b3;--line:#2a3340;--card:#171e28;--good:#47c28f;--warn:#e0a84a;--bad:#ef6b5b;--acc:#5cc0cf}}
+*{box-sizing:border-box}.brand{display:flex;align-items:center;gap:10px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.brand svg{height:30px;width:auto;display:block}.brand .dk{display:none}.brand .bn{font-weight:700;font-size:20px;letter-spacing:-.4px}.brand .bn b{color:var(--acc)}
+.brand .bt{margin-left:auto;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}@media(max-width:560px){.brand .bt{display:none}}
+@media(prefers-color-scheme:dark){.brand .lt{display:none}.brand .dk{display:inline}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
 main{max-width:900px;margin:0 auto;padding:24px 16px 64px}h1{margin:0;font-size:26px}h2{font-size:17px;margin:32px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
 .sub{color:var(--mut)}.draft{background:#fff4d6;color:#7a5600;border:1px solid #f0d58c;padding:8px 12px;border-radius:8px;margin:12px 0}
 .grades{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}.g{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;min-width:150px}
@@ -193,7 +199,7 @@ def render_html(card: dict, changes: list[str] | None = None) -> str:
     draft = card["mode"] != "published"
     conf = g["confidence"]
     h = [f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-         f"<title>{escape(c['name'])} card</title><style>{CSS}</style></head><body><main>",
+         f"<title>{escape(c['name'])} | HeadGrade</title><link rel='icon' href=\"{brand.FAVICON_HREF}\"><style>{CSS}</style></head><body><main>{brand.header_html()}",
          f"<h1>{escape(c['name'])}</h1><div class='sub'>{escape(c['ticker'])} &middot; {escape(c['stage'])} &middot; "
          f"{', '.join(m.upper() for m in c['metals'])} &middot; {escape(c.get('jurisdiction') or '')}</div>"]
     if draft:

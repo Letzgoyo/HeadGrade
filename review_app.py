@@ -6,6 +6,8 @@ import json
 import os
 from datetime import date
 
+from pathlib import Path
+
 import streamlit as st
 import streamlit.components.v1 as components
 from sqlalchemy import select
@@ -16,11 +18,13 @@ from headgrade.registry import METALS, METAL_UNIT, STAGES
 from headgrade.render import render_html
 from headgrade.valuation import Market
 
-st.set_page_config(page_title="HeadGrade review", page_icon="⛏️", layout="wide")
+st.set_page_config(page_title="HeadGrade review", page_icon=str(Path(__file__).parent / "brand" / "headgrade-app-icon.png"), layout="wide")
 engine = db.make_engine()
 db.init_db(engine)
 
 PAGES = ["Review queue", "Pipeline status", "Card preview", "Companies & documents", "Decks & benchmarks"]
+_brand = Path(__file__).parent / "brand"
+st.logo(str(_brand / "headgrade-1-core.svg"), icon_image=str(_brand / "headgrade-icon.svg"))
 page = st.sidebar.radio("View", PAGES)
 st.sidebar.caption("Private admin screen. Draft cards use unverified facts; published cards use only what you verify.")
 
