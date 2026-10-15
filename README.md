@@ -91,6 +91,14 @@ Preview with fictional data: `python examples/seed_site_demo.py demo_out` then `
 **Admin screen:** `ADMIN_PASSWORD=... streamlit run review_app.py --server.port 8501` in the workspace shell. Do not publish it in the deployment, and always set
 `ADMIN_PASSWORD`. Public deployments need a real database (`DATABASE_URL`, Postgres) rather than a local file, because Replit deployments do not keep files.
 
+## Going live on Replit (checklist)
+1. Import the repo; Shell: `pip install -r requirements.txt`.
+2. Secrets: `ANTHROPIC_API_KEY`, `SEC_USER_AGENT` ("Name email"), `DATABASE_URL` (a Postgres URL, same value in the workspace and the deployment), `ADMIN_PASSWORD`,
+   `HEADGRADE_SITE_URL` (your domain, once you have one).
+3. Shell: `python -m headgrade.cli init`, then the B2Gold commands below, so there is at least one published card.
+4. Press Run to preview the public site; then Deploy (Autoscale), using the run command in `.replit`. Never deploy `review_app.py`.
+5. Weekly refresh: run `python -m headgrade.cli weekly` from the workspace shell (or a Scheduled Deployment) against the same `DATABASE_URL`.
+
 ## Run on Replit (first live test: B2Gold)
 1. Create Repl > Import from GitHub > `Letzgoyo/HeadGrade`. In the Shell: `pip install -r requirements.txt`.
 2. Secrets: `ANTHROPIC_API_KEY`, and `SEC_USER_AGENT` = `Your Name your@email.com` (SEC requires it).
