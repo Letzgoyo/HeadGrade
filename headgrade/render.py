@@ -14,6 +14,10 @@ main{max-width:900px;margin:0 auto;padding:24px 16px 64px}h1{margin:0;font-size:
 table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:600}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.flag{border-left:4px solid var(--warn);background:var(--card);padding:6px 10px;margin:6px 0;border-radius:4px}.flag.high{border-color:var(--bad)}
 .mut{color:var(--mut)}.small{font-size:12.5px}.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+.cl{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}.sq{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--card);font-size:12.5px;line-height:1.35;min-height:92px}
+.sq b{display:block;font-size:12px;margin-bottom:3px}.sq .d{color:var(--mut);font-size:11.5px}.sq.yes{border-color:var(--good);border-width:2px}.sq.no{border-color:var(--bad)}.sq.unknown{border-style:dashed}.sq.na,.sq.free{opacity:.6}
+.sq .st{font-weight:700}.sq.yes .st{color:var(--good)}.sq.no .st{color:var(--bad)}.sq q{display:block;margin-top:3px;font-size:11px}
+@media(max-width:640px){.cl{grid-template-columns:repeat(2,1fr)}}
 .pill.ok{color:var(--good);border-color:var(--good)}.pill.bad{color:var(--bad);border-color:var(--bad)}q{color:var(--mut)}
 """
 
@@ -123,6 +127,36 @@ def _valuation_section(v: dict, deck: dict) -> str:
     return "".join(out)
 
 
+_MARK = {"yes": "\u2713 Yes", "no": "\u2717 No", "unknown": "? Unknown", "na": "\u2013 Not applicable", "free": "Free square"}
+
+
+def _checklist_section(cl: dict | None, draft: bool) -> str:
+    if not cl:
+        return ""
+    if not cl.get("applicable"):
+        return f"<h2>Project checklist</h2><p class='small mut'>{escape(cl.get('reason', ''))}</p>"
+    c = cl["counts"]
+    h = [f"<h2>Project checklist</h2><p><b>{c['yes']} of {c['applicable']}</b> squares ticked"
+         + (f" &middot; {c['no']} no &middot; {c['unknown']} unknown" if c["applicable"] else "")
+         + (f" &middot; {c['na']} not applicable" if c["na"] else "")
+         + f"<br><span class='small mut'>Lead project: {escape(cl.get('lead_project') or 'company level')}. "
+           "Each square is a yes/no test of project readiness. <b>Unknown means we found no sourced statement, not that the answer is no.</b> "
+           "This panel is separate from the grades and does not change them. Thresholds are our settings, not guarantees.</span></p><div class='cl'>"]
+    for q in cl["squares"]:
+        quote = ""
+        if q["evidence"] and q["evidence"][0].get("quote"):
+            e = q["evidence"][0]
+            quote = f"<q>{escape(e['quote'][:140])}</q><span class='d'>{escape(e.get('document') or '')} p.{e.get('page')}</span>"
+        if q["state"] == "free":
+            h.append("<div class='sq free'><b style='text-align:center;margin-top:24px'>Free square</b></div>")
+            continue
+        flag = " (unverified)" if q.get("unverified") and draft else ""
+        h.append(f"<div class='sq {q['state']}'><b>{escape(q['title'])}</b><span class='st'>{_MARK[q['state']]}{flag}</span>"
+                 f"<div class='d'>{escape(q['detail'])}</div>{quote}</div>")
+    h.append("</div>")
+    return "".join(h)
+
+
 def render_html(card: dict, changes: list[str] | None = None) -> str:
     c, g, v = card["company"], card["grade"], card["valuation"]
     draft = card["mode"] != "published"
@@ -147,6 +181,7 @@ def render_html(card: dict, changes: list[str] | None = None) -> str:
              + ", ".join(f"{k.upper()} {val:,.2f}" for k, val in card["deck"]["prices"].items()) + ".</span></p>")
     if changes:
         h.append("<h2>What changed</h2><ul>" + "".join(f"<li>{escape(x)}</li>" for x in changes) + "</ul>")
+    h.append(_checklist_section(card.get("checklist"), draft))
     h.append("<h2>Quality</h2><table><tr><th>Category</th><th class='n'>Grade</th><th class='n'>Score</th><th>Why</th></tr>")
     for name, cat in g["categories"].items():
         why = "; ".join(cat["notes"]) or "no data"

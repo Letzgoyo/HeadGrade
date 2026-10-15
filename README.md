@@ -66,6 +66,13 @@ Other commands: `universe-scan-sec` (find mining companies among SEC filers), `c
 **Coverage today:** companies that file with the SEC (many TSX/ASX names that cross-list file 40-F/6-K). Companies listed only on
 SEDAR+ (most TSX-V/CSE juniors) or only on the ASX are NOT covered yet: SEDAR+ has no official API and its terms must be checked.
 
+## Project checklist
+A separate 5x5 panel on every card (24 yes/no tests plus a free square): grade vs cutoff, mine life, processing, jurisdiction, study economics,
+management, partners, community, measured share, water, permits, infrastructure, financing, cash and expansion upside. Each square is yes, no,
+unknown (nothing sourced found: never a guess) or not applicable to the stage. Text-based squares need a verbatim quote and go through the same two-reading
+verification as every other fact. It does not change the grades. Thresholds are in `checklist.THRESHOLDS`; the two "HeadGrade view" squares stay unknown
+until a per-metal view is supplied. Royalty companies are not scored this way.
+
 ## Jurisdiction scores (Fraser Institute)
 `python -m headgrade.cli jurisdictions-load-fraser <Fraser Annual Survey of Mining Companies PDF>` loads all 68 jurisdictions
 (tested exactly against the 2025 edition). The **policy score (PPI, 0-100)** drives the jurisdiction grade, because mineral

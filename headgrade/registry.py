@@ -75,4 +75,16 @@ REGISTRY: dict[str, FactSpec] = dict([
     _s("permit_stage", "text", "project", "Permitting status: none, baseline, in_process, approved, fully_permitted"),
     _s("jurisdiction", "text", "project", "Country / state / province of the project"),
     _s("expansion_potential", "text", "project", "Stated expansion or exploration upside (quote the company's own words)"),
+    _s("cutoff_grade", "grade", "project", "Cutoff grade used to report the mineral resource or reserve", needs_metal=True),
+    # ---- project checklist statements: value text is "yes" or "no"; the quote must be the sentence that supports it
+    _s("check.simple_metallurgy", "text", "project", "yes if the document says processing is conventional/proven/simple (e.g. standard gravity+CIL, high recoveries, no refractory ore or penalty elements); no if it says the ore is refractory, complex or carries penalty elements"),
+    _s("check.strategic_partner", "text", "project", "yes if a strategic partner, joint-venture partner or strategic investor is involved in the project or company, as stated"),
+    _s("check.partner_is_major", "text", "project", "yes if that partner is a major, mid-tier or otherwise well-funded operating mining company, as stated"),
+    _s("check.community_support", "text", "project", "yes if a community, First Nations or local agreement or stated community support is disclosed"),
+    _s("check.no_opposition", "text", "project", "yes only if the document states there is no significant community opposition, blockade or legal challenge; no if it discloses one"),
+    _s("check.water_ok", "text", "project", "yes if the document says water supply is secure and water/contamination is not a material issue; no if it names water as a risk or constraint"),
+    _s("check.permitting_pathway", "text", "project", "yes if the document describes a clear, supportive or fast-track permitting pathway; no if it describes delays, uncertainty or opposition"),
+    _s("check.low_cost_mining", "text", "project", "yes if the mining method is low-cost and low-dilution (e.g. bulk open pit, selective high-grade zones); no if it is high-cost or high-dilution"),
+    _s("check.baseline_studies", "text", "project", "yes if environmental baseline studies are completed or under way"),
+    _s("check.infrastructure_ok", "text", "project", "yes if power, road, rail, port and water infrastructure are described as available or nearby; no if major infrastructure must be built"),
 ])

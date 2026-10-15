@@ -40,6 +40,9 @@ AIF = ("<html><body><p>Example Mining Corp. Annual Information Form for the year
        "<p>Both mines are fully permitted and operating.</p>"
        "<p>Directors and officers as a group beneficially own approximately 4.5% of the outstanding common shares.</p>"
        "<p>The Company's management team has previously built three mines.</p>"
+       "<p>The Northland Mine has signed community development agreements with the neighbouring villages.</p>"
+       "<p>Grid power, an all-weather road and a nearby airstrip serve the Northland Mine.</p>"
+       "<p>Water supply at the Northland Mine is seasonal and is a risk to throughput in the dry season.</p>"
        "<p>Based on mineral reserves, the mine life at current production is nine years.</p>" + FILL * 3 + "</body></html>")
 DOCS = {"exhibit991.htm": RELEASE, "exhibit992.htm": STATEMENTS, "exhibit993.htm": AIF}
 SUB = {"sic": "1040", "name": "EXAMPLE MINING CORP (FICTIONAL)", "exchanges": ["NYSE American"], "filings": {"recent": {
@@ -89,11 +92,14 @@ def readings(reader_b: bool):
             ef(a, "project_weight_pct", "the Northland Mine accounted for 55%", project="Northland Mine", value=55, unit="%"),
             ef(a, "permit_stage", "Both mines are fully permitted and operating", project="Kala Mine", text="fully permitted"),
             ef(a, "permit_stage", "Both mines are fully permitted and operating", project="Northland Mine", text="fully permitted"),
+            ef(a, "check.community_support", "signed community development agreements with the neighbouring villages", project="Northland Mine", text="yes"),
+            ef(a, "check.infrastructure_ok", "Grid power, an all-weather road and a nearby airstrip serve the Northland Mine", project="Northland Mine", text="yes"),
+            ef(a, "check.water_ok", "Water supply at the Northland Mine is seasonal and is a risk to throughput in the dry season", project="Northland Mine", text="no"),
             ef(a, "team.insider_ownership_pct", "own approximately 4.5% of the outstanding common shares", value=4.5, unit="%"),
             ef(a, "team.prior_mines_built", "management team has previously built three mines", value=3),
             ef(a, "reserve_life_years", "the mine life at current production is nine years", value=9, unit="years")]}
     if reader_b:   # the second reader misses two statements entirely (so they stay unconfirmed)
-        out[a] = [x for x in out[a] if x.key not in ("team.prior_mines_built", "reserve_life_years")]
+        out[a] = [x for x in out[a] if x.key not in ("team.prior_mines_built", "reserve_life_years", "check.water_ok")]
     return out
 
 
@@ -136,7 +142,7 @@ def build(out: Path):
     with db.session_scope(engine) as s:
         fid = review.queue(s, None, needs_attention=True)[0].id
         review.override(s, fid, value=410e6, note="checked against the MD&A: $410 million")
-        for f in s.scalars(select(db.Fact).where(db.Fact.status == "unverified", db.Fact.key.in_(("reserve_life_years", "team.prior_mines_built")))):
+        for f in s.scalars(select(db.Fact).where(db.Fact.status == "unverified", db.Fact.key.in_(("reserve_life_years", "team.prior_mines_built", "check.water_ok")))):
             review.set_status(s, f.id, "verified")
         co = s.scalar(select(db.Company))
         card, status, changes = weekly.build_company_card(s, co, date(2026, 10, 11), publish=True, save=False)

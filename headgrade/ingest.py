@@ -67,6 +67,10 @@ def normalise_value(ef: ExtractedFact) -> Norm:
     value_num, unit, ccy, text = None, None, None, ef.text
     if spec.family in ("text", "date"):
         text = ef.text or (str(ef.value) if ef.value is not None else None)
+        if ef.key.startswith("check."):
+            t = (text or "").strip().lower()
+            text = "yes" if t in ("yes", "true", "y") else "no" if t in ("no", "false", "n") else text
+            notes.append("answer normalised to yes/no" if text in ("yes", "no") else "yes/no answer not recognised")
         if ef.key == "study_stage":
             norm = _enum(text, STAGE_WORDS)
             notes.append("study stage normalised" if norm else "study stage not recognised")

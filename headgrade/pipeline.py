@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import grading, valuation as V
+from . import checklist, grading, valuation as V
 from .db import Benchmark, Company, Document, Fact, JurisdictionScore, PriceDeck, Project, Snapshot
 from .decks import Deck
 from .facts import F, FactBook
@@ -55,6 +55,8 @@ def build_card(session: Session, company: Company, deck: Deck, market: V.Market,
     else:
         raise ValueError(f"unknown stage '{stage}'")
     g = grading.grade(fb, stage, projects, val, jurisdiction_table(session), today)
+    table = jurisdiction_table(session)
+    cl = checklist.evaluate(fb, stage, projects, val, table, primary)
     # re-read confidence now that grading has also consumed facts
     val["confidence"] = fb.confidence()
     ids = {u.fact_id for u in fb.used if u.fact_id}
@@ -71,6 +73,10 @@ def build_card(session: Session, company: Company, deck: Deck, market: V.Market,
                          "value_raw": r.value_num if r.value_num is not None else r.value_text,
                          "document": d.title if d else None, "document_date": str(d.effective_date) if d and d.effective_date else None,
                          "page": r.page, "quote": r.quote, "url": d.url if d else None})
+    for sq in cl["squares"]:
+        for e in sq["evidence"]:
+            d = docs.get(e.pop("doc_id", None))
+            e["document"] = d.title if d else None
     return {
         "mode": "published" if publish else "draft",
         "company": {"name": company.name, "ticker": company.ticker, "exchange": company.exchange, "stage": stage,
@@ -78,7 +84,7 @@ def build_card(session: Session, company: Company, deck: Deck, market: V.Market,
                     "projects": [p.name for p in company.projects]},
         "market": {"price": market.price, "currency": market.currency, "price_date": str(market.price_date) if market.price_date else None},
         "deck": {"name": deck.name, "as_of": str(deck.as_of) if deck.as_of else None, "prices": deck.prices},
-        "grade": g, "valuation": val, "evidence": evidence,
+        "grade": g, "valuation": val, "checklist": cl, "evidence": evidence,
         "disclosures": {"sponsored": company.sponsored, "owner_holds_position": company.held_by_owner},
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
@@ -127,6 +133,9 @@ def diff_cards(old: dict | None, new: dict) -> list[str]:
         chg = 100 * (new["market"]["price"] / old["market"]["price"] - 1)
         if abs(chg) >= 10:
             out.append(f"Share price moved {chg:+.0f}% since the last card.")
+    oc, nc = (old.get("checklist") or {}).get("counts") or {}, (new.get("checklist") or {}).get("counts") or {}
+    if oc and nc and oc.get("yes") != nc.get("yes"):
+        out.append(f"Project checklist went from {oc.get('yes')} to {nc.get('yes')} squares ticked.")
     ov, nv = old["valuation"]["metrics"].get("p_nav"), new["valuation"]["metrics"].get("p_nav")
     if ov and nv and abs(nv / ov - 1) >= 0.15:
         out.append(f"Price-to-NAV moved from {ov:.2f} to {nv:.2f}.")
